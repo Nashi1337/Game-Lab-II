@@ -6,13 +6,13 @@
 
 |  General Info  | |
 | ---|---|
-| Working Title | `Edit me!` |
-| Final Title | `Edit me!` |
-| Student | `Name`, `edit-me`@stud-mail.uni-wuerzburg.de, `s######` |
-| Target Platform(s) | `Edit me!` |
-| Start Date | 21.10.2019 |
+| Working Title | Wire Generator Plugin |
+| Final Title | Wire Generator Plugin |
+| Student | Max Rogner, maximilian.rogner@stud-mail.uni-wuerzburg.de, s432750 |
+| Target Platform(s) | Windows |
+| Start Date | 3.11.2022 |
 | Study Program | Games Engineering B.Sc.|
-| Engine Version | Unity 2021.3.11f1 or Unreal 5.0.3 |
+| Engine Version | Unity 2020.3.15f2 LTS |
 
 ### Abstract
 
