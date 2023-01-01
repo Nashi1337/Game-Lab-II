@@ -1,6 +1,7 @@
 {
   "name": "com.03-gl2-petter-rogner.wire-generator.Runtime",
   "references": [
+	"com.03-gl2-petter-rogner.wire-generator"
   ],
   "includePlatforms": [
   ],
