@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -8,22 +9,21 @@ namespace WireGenerator
     [RequireComponent(typeof(MeshFilter))]
     public class Wire : MonoBehaviour
     {
-        public Vector3 offsetPoint1 = new Vector3(0, 0, 0);
-        public Vector3 offsetPoint2 = new Vector3(0, 0, 1);
-        public Vector3 point1 {
-            get { return (useAnchor1 && anchorTransform1 ? anchorTransform1 : transform).position + offsetPoint1; }
-            set { offsetPoint1 = value - (useAnchor1 && anchorTransform1 ? anchorTransform1 : transform).position; }
-        }
-        public Vector3 point2 {
-            get { return (useAnchor2 && anchorTransform2 ? anchorTransform2 : transform).position + offsetPoint2; }
-            set { offsetPoint2 = value - (useAnchor2 && anchorTransform1 ? anchorTransform2:transform).position; }
+        [Serializable]
+        public class ControlPoint
+        {
+            public Vector3 offset;
+            public bool useAnchor;
+            public Transform anchorTransform;
+
+            public ControlPoint(Vector3 offset) {
+                this.offset = offset;
+                useAnchor = false;
+                anchorTransform = null;
+            }
         }
 
-        public bool useAnchor1=false;
-        public bool useAnchor2=false;
-
-        public Transform anchorTransform1;
-        public Transform anchorTransform2;
+        public List<ControlPoint> points = new List<ControlPoint>() { new ControlPoint(new Vector3(0,0,0)), new ControlPoint(new Vector3(0, 0, 1))};
 
         float lengthFactor = 1f;
 
@@ -41,51 +41,79 @@ namespace WireGenerator
             meshFilter=GetComponent<MeshFilter>();
             GenerateMesh();
         }
+
+        public Vector3 GetPosition(int i) {
+            return (points[i].useAnchor && points[i].anchorTransform ? points[i].anchorTransform : transform).position + points[i].offset;
+        }
+        public void SetPosition(int i, Vector3 position)
+        {
+            points[i].offset = position - (points[i].useAnchor && points[i].anchorTransform ? points[i].anchorTransform : transform).position;
+        }
+
         public void GenerateMesh()
         {
-            //calculate vector from one end to the other
-            var tangent = (offsetPoint2-offsetPoint1).normalized;
+            var tempVertices = new Vector3[corners * points.Count];
+            var tempNormals = new Vector3[corners * points.Count];
 
-            Vector3 startpointVertice;
-            
-            if (tangent.y != 1)
+            for (int controlPointId = 0; controlPointId < points.Count; controlPointId++)
             {
-                //calculate vector perpendicular tangent
-                var helpVector = Quaternion.Euler(0, -90, 0) * tangent;
-                //cross returns vector perpendicular to two vectors
 
-                startpointVertice = Vector3.Cross(tangent, helpVector).normalized;
-            }
-            else {
-                startpointVertice = Vector3.right;
-            }
+                //calculate vector from one end to the other
+                Vector3 tangent;
+                if (controlPointId == 0) {
+                    tangent = (GetPosition(controlPointId) + GetPosition(1)).normalized;
+                }
+                else
+                {
+                    tangent = (GetPosition(controlPointId) - GetPosition(controlPointId - 1)).normalized;
+                }
 
-            startpointVertice *= radius;
+                Vector3 startpointVertice;
+            
+                if (tangent.y != 1)
+                {
+                    //calculate vector perpendicular tangent
+                    var helpVector = Quaternion.Euler(0, -90, 0) * tangent;
+                    //cross returns vector perpendicular to two vectors
+                    startpointVertice = Vector3.Cross(tangent, helpVector).normalized;
+                }
+                else {
+                    startpointVertice = Vector3.right;
+                }
+
+                startpointVertice *= radius;
 
 
-            var offsetCircle=Quaternion.AngleAxis(360f / corners, tangent);
+                var offsetCircle=Quaternion.AngleAxis(360f / corners, tangent);
 
-            var tempVertices = new Vector3[corners*2];
-            var tempNormals = new Vector3[corners * 2];
-            for (int controlPoint = 0; controlPoint < 2; controlPoint++) {
                 for (int i = 0; i < corners; i++)
                 {
                     offsetCircle = Quaternion.AngleAxis((360f / corners) * i, tangent);
-                    tempVertices[i + corners * controlPoint] = (offsetCircle * startpointVertice) + (controlPoint==0?offsetPoint1:offsetPoint2);
-                    tempNormals[i + corners * controlPoint] = offsetCircle * startpointVertice;
+                    tempVertices[i + corners * controlPointId] = (offsetCircle * startpointVertice) + points[controlPointId].offset;
+                    tempNormals[i + corners * controlPointId] = offsetCircle * startpointVertice;
                 }
             }
+
+
             mesh.vertices = tempVertices;
             mesh.normals = tempNormals;
-            var tempTriangles = new int[corners*6];
-            for (int i = 0; i < corners; i++) {
-                tempTriangles[i * 6 + 0] = i;
-                tempTriangles[i * 6 + 1] = (i + 1) % corners;
-                tempTriangles[i * 6 + 2] = corners + i;
-                tempTriangles[i * 6 + 3] = (i + 1) % corners;
-                tempTriangles[i * 6 + 4] = corners + (i + 1) % corners;
-                tempTriangles[i * 6 + 5] = corners + i;
+
+            var tempTriangles = new int[corners*6*(points.Count-1)];
+            for (int row = 0; row < points.Count-1; row++)
+            {
+                Debug.Log("zoinks");
+                for (int i = 0; i < corners; i++)
+                {
+                    int baseLine = row * corners * 6 + i * 6;
+                    tempTriangles[baseLine + 0] = i                             + corners * row;
+                    tempTriangles[baseLine + 1] = (i + 1) % corners             + corners * row;
+                    tempTriangles[baseLine + 2] = corners + i                   + corners * row;
+                    tempTriangles[baseLine + 3] = (i + 1) % corners             + corners * row;
+                    tempTriangles[baseLine + 4] = corners + (i + 1) % corners   + corners * row;
+                    tempTriangles[baseLine + 5] = corners + i                   + corners * row;
+                }
             }
+
             mesh.triangles=tempTriangles;
             meshFilter.sharedMesh = mesh;
         }
