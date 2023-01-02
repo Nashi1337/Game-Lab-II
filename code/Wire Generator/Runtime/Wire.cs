@@ -80,6 +80,10 @@ namespace WireGenerator
                 {
                     startpointVertice = Vector3.right;
                 }
+                else if (tangent.y == -1)
+                {
+                    startpointVertice = Vector3.right;
+                }
                 else {
                     //calculate vector perpendicular tangent
                     var helpVector = Quaternion.Euler(0, -90, 0) * tangent;
@@ -107,8 +111,7 @@ namespace WireGenerator
             var tempTriangles = new int[corners*6*(points.Count-1)];
             for (int row = 0; row < points.Count-1; row++)
             {
-                Debug.Log("zoinks");
-                for (int i = 0; i < corners; i++)
+                    for (int i = 0; i < corners; i++)
                 {
                     int baseLine = row * corners * 6 + i * 6;
                     tempTriangles[baseLine + 0] = i                             + corners * row;
