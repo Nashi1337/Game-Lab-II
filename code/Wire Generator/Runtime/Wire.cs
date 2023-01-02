@@ -60,25 +60,31 @@ namespace WireGenerator
 
                 //calculate vector from one end to the other
                 Vector3 tangent;
+
                 if (controlPointId == 0) {
-                    tangent = (GetPosition(controlPointId) + GetPosition(1)).normalized;
+                    tangent = -(GetPosition(controlPointId) - GetPosition(1)).normalized;
                 }
-                else
+                else if (controlPointId==points.Count-1)
                 {
                     tangent = (GetPosition(controlPointId) - GetPosition(controlPointId - 1)).normalized;
                 }
+                else
+                {
+                    tangent = ((GetPosition(controlPointId) - GetPosition(controlPointId - 1)).normalized - (GetPosition(controlPointId) - GetPosition(controlPointId + 1)).normalized).normalized;
+                }
+                Debug.Log(tangent);
 
                 Vector3 startpointVertice;
             
-                if (tangent.y != 1)
+                if (tangent.y == 1)
                 {
+                    startpointVertice = Vector3.right;
+                }
+                else {
                     //calculate vector perpendicular tangent
                     var helpVector = Quaternion.Euler(0, -90, 0) * tangent;
                     //cross returns vector perpendicular to two vectors
                     startpointVertice = Vector3.Cross(tangent, helpVector).normalized;
-                }
-                else {
-                    startpointVertice = Vector3.right;
                 }
 
                 startpointVertice *= radius;
