@@ -99,7 +99,7 @@ namespace WireGenerator
                 for (int i = 0; i < corners; i++)
                 {
                     offsetCircle = Quaternion.AngleAxis((360f / corners) * i, tangent);
-                    tempVertices[i + corners * controlPointId] = (offsetCircle * startpointVertice) + points[controlPointId].offset;
+                    tempVertices[i + corners * controlPointId] = (offsetCircle * startpointVertice) + (points[controlPointId].useAnchor?GetPosition(controlPointId)-transform.position:points[controlPointId].offset);
                     tempNormals[i + corners * controlPointId] = offsetCircle * startpointVertice;
                 }
             }
