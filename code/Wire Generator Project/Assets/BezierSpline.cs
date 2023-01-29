@@ -10,8 +10,11 @@ using UnityEngine;
     {
     [SerializeField]
     private Vector3[] points;
+    public Transform wireStartObject;
+    public Transform wireEndObject;
     public Vector3 start;
     public Vector3 end;
+    private Vector3 pos;
     public float length;
 
     public float pointsPerMeter = 0.3f;
@@ -19,66 +22,155 @@ using UnityEngine;
 
     Mesh mesh;
     public MeshFilter meshFilter;
+    public MeshRenderer meshRenderer;
 
     public int radialSegments = 5;
     public float diameter = 0.1f;
     public float weight = 0;
     public float tension = 1;
+    public float tiling = 3f;
 
     public float sagDepth;
 
-    private void Awake()
+    public void CreateFromObject(Transform connector)
     {
-        UpdateSpline();
+        wireStartObject = connector.transform;
+        CreateWire();
+        StraightMode();
     }
 
-    public void UpdateSpline()
+    public void CreateWire()
     {
+        /*if (wireEndObject != null && wireStartObject != null)
+        {
+            start = wireStartObject ? wireStartObject.transform.position : transform.position;
+            end = wireEndObject ? wireEndObject.transform.position : transform.position;
+        }
+        else
+        {*/
         points = new Vector3[pointCount];
-        points[0].x = 0;
-        points[pointCount-1].x = 10;
+        pos = transform.position;
+        if(wireStartObject != null)
+        {
+            if(wireStartObject.localScale == new Vector3(1, 1, 1))
+            {
+                transform.position = wireStartObject.transform.position;
+            }
+            else
+            {
+                pos.x = wireStartObject.transform.position.x + wireStartObject.localScale.x;
+                //pos.y = wireStartObject.transform.position.y + wireStartObject.localScale.y;
+            }
 
-        //start and end could be connector points on other game objects
+            transform.position = pos;
+            points[0] = /*(wireStartObject.transform.position) + */new Vector3(1,0,0);
+        }
+        else
+        {
+            points[0].x = 1;
+        }
+        points[pointCount - 1].x = points[0].x + 10;
         start = points[0];
         end = points[pointCount - 1];
+        //}
+
         length = Vector3.Distance(start, end);
-        
+
         tension = weight * length;
 
         float sagAmount = tension + weight; //+ Offset?
         float lowestPoint = CalculateWireSag(sagAmount, 0.5f);
         sagDepth = lowestPoint;
 
-
+        //pointCount = Mathf.RoundToInt(pointsPerMeter * length + sagDepth);
+        //pointCount = Mathf.Clamp(pointCount, 6, 50);
+        //points = new Vector3[pointCount];
 
         Vector3 pivot = Vector3.Lerp(start, end, 0.5f);
         pivot.y += lowestPoint;
         //gameObject.transform.position = pivot;
+
+        //Vector3 forward = (end - start).normalized;
+        //if (forward != Vector3.zero) gameObject.transform.forward = forward;
+
+
+        for (int i = 0; i < pointCount; i++)
+        {
+            float wireSamplePoint = (float)i / (float)(pointCount - 1);
+            //Debug.Log("wireSamplePoint: " + wireSamplePoint);
+            Vector3 wirePoint = (end - start) * wireSamplePoint;
+            wirePoint.y += CalculateWireSag(sagAmount, wireSamplePoint);
+            if (i == pointCount - 1)
+            {
+                //wirePoint.y = points[0].y;
+            }
+            points[i] = /*transform.InverseTransformPoint*/(start + wirePoint);
+
+        }
+
+
+        start = points[0];
+        end = points[pointCount - 1];
+
+        //UpdateMesh();
+        GenerateMesh();
+
+    }
+
+    public void UpdateSpline()
+    {
+        //points = new Vector3[pointCount];
+        //points[0].x = 0;
+        //points[pointCount - 1].x = pointCount;
+
+        start = points[0];
+        end = points[pointCount - 1];
+
+        length = Vector3.Distance(start, end);
+        tension = weight * length;
+
+        float sagAmount = tension + weight; //+ Offset?
+        float lowestPoint = CalculateWireSag(sagAmount, 0.5f);
+        sagDepth = lowestPoint;
+
+        Vector3 pivot = Vector3.Lerp(start, end, 0.5f);
+        pivot.y += lowestPoint;
+        //gameObject.transform.position = pivot;
+
+        //Vector3 forward = (end - start).normalized;
+        //if (forward != Vector3.zero) gameObject.transform.forward = forward;
+
         
         for(int i = 0; i < pointCount; i++)
         {
             float wireSamplePoint = (float)i / (float)(pointCount-1);
-            Debug.Log("wireSamplePoint: " + wireSamplePoint);
+            //Debug.Log("wireSamplePoint: " + wireSamplePoint);
             Vector3 wirePoint = (end - start) * wireSamplePoint;
             wirePoint.y += CalculateWireSag(sagAmount, wireSamplePoint);
+            if(i == pointCount - 1)
+            {
+                //wirePoint.y = points[0].y;
+            }
             points[i] = /*transform.InverseTransformPoint*/(start + wirePoint);
         }
+        
+        //start = transform.position + points[0];
+        //end = transform.position + points[points.Length - 1];
 
-        start = transform.position + points[0];
-        end = transform.position + points[pointCount - 1];
-
-        UpdateMesh();
+        //UpdateMesh();
+        GenerateMesh();
     }
 
-    public void UpdateMesh()
+    public void UpdateMesh(Material mat)
     {
         if (meshFilter == null)
         {
-
+            meshFilter = gameObject.AddComponent<MeshFilter>();
         }
-        meshFilter = gameObject.AddComponent<MeshFilter>();
-        //meshFilter.mesh = 
-        GenerateMesh();
+
+        meshRenderer = gameObject.GetComponent<MeshRenderer>();
+        meshRenderer.sharedMaterial = mat;
+        //GenerateMesh();
     }
 
     public int ControlPointCount
@@ -102,24 +194,24 @@ using UnityEngine;
     public void AddCurve()
     {
         Vector3 point = points[pointCount - 1];
-        Array.Resize(ref points, points.Length + 3);
+        Array.Resize(ref points, pointCount + 3);
         point.x += 1f;
-        points[points.Length - 3] = point;
+        points[pointCount - 3] = point;
         point.x += 1f;
-        points[points.Length - 2] = point;
+        points[pointCount - 2] = point;
         point.x += 1f;
-        points[points.Length - 1] = point;
+        points[pointCount - 1] = point;
     }
 
     public static float CalculateWireSag(float gravity, float t)
     {
-        Debug.Log("WireSag: " + gravity * -Mathf.Sin(t * Mathf.PI));
+        //Debug.Log("WireSag: " + gravity * -Mathf.Sin(t * Mathf.PI));
         return gravity * -Mathf.Sin(t * Mathf.PI);
     }
 
-    public void SagMode()
+    public void SagMode(float sagWeight)
     {
-        Vector3 sagPoint = Vector3.Lerp(points[0], points[pointCount - 1], 0.5f);
+        /*Vector3 sagPoint = Vector3.Lerp(points[0], points[pointCount - 1], 0.5f);
         sagPoint.y -= CalculateWireSag(sagDepth, 0.5f);
         Debug.Log("sagPoint: " + sagPoint);
 
@@ -138,13 +230,15 @@ using UnityEngine;
                 points[j + 1].y += (half - j + 1) * sagDepth;
             Debug.Log("Punkt " + j + ": " + points[j].y);
             }
-
-        GenerateMesh();
+        */
+        weight = sagWeight;
+        UpdateSpline();
+        //GenerateMesh();
     }
 
     public void StraightMode()
     {
-        if(points[0].y > points[pointCount - 1].y)
+        /*if(points[0].y > points[pointCount - 1].y)
         {
             for(int i = 1; i < points.Length-2; i++)
             {
@@ -167,17 +261,18 @@ using UnityEngine;
                 points[i].x = points[i-1].x + points[pointCount - 1].x / pointCount - 1;
                 points[i].y = points[0].y + points[pointCount - 1].y / pointCount - 1;
             }
-        }
-        GenerateMesh();
+        }*/
+        weight = 0;
+        UpdateSpline();
     }
 
-        public int CurveCount
+    public int CurveCount
+    {
+        get
         {
-            get
-            {
-                return (points.Length - 1) / 3;
-            }
+            return (pointCount - 1) / 3;
         }
+    }
 
         public Vector3 GetPoint(float t)
         {
@@ -185,7 +280,7 @@ using UnityEngine;
             if (t >= 1f)
             {
                 t = 1f;
-                i = points.Length - 4;
+                i = pointCount - 4;
             }
             else
             {
@@ -204,7 +299,7 @@ using UnityEngine;
             if (t >= 1f)
             {
                 t = 1f;
-                i = points.Length - 4;
+                i = pointCount - 4;
             }
             else
             {
@@ -225,10 +320,10 @@ using UnityEngine;
     public int[] GenerateIndices()
     {
         // Two triangles and 3 vertices
-        var indices = new int[points.Length * radialSegments * 2 * 3];
+        var indices = new int[pointCount * radialSegments * 2 * 3];
 
         var currentIndicesIndex = 0;
-        for (int segment = 1; segment < points.Length; segment++)
+        for (int segment = 1; segment < pointCount; segment++)
         {
             for (int side = 0; side < radialSegments; side++)
             {
@@ -263,7 +358,7 @@ using UnityEngine;
         }
 
         //If not last index
-        if (index < points.Length - 1)
+        if (index < pointCount - 1)
         {
             forward += (points[index + 1] - points[index]).normalized;
             dirCount++;
@@ -298,30 +393,32 @@ using UnityEngine;
             mesh = new Mesh();
         }
 
-        var verticesLength = radialSegments * points.Length;
+        mesh.name = name + " Mesh";
+
+        var verticesLength = radialSegments * pointCount; //replaced points.length
         Vector3[] vertices = new Vector3[verticesLength];
-        Color[] colors = new Color[verticesLength];
+        //Color[] colors = new Color[verticesLength];
 
         int[] indices = GenerateIndices();
-        //Vector2[] uvs = GenerateUVs(spline);
-        //colors = GenerateColors(spline);
+        //Vector2[] uvs = GenerateUVs();
+        //colors = GenerateColors();
 
         if (verticesLength > mesh.vertexCount)
         {
             mesh.vertices = vertices;
             mesh.triangles = indices;
-            //spline.mesh.uv = uvs;
+            //mesh.uv = uvs;
         }
         else
         {
             mesh.triangles = indices;
             mesh.vertices = vertices;
-            //spline.mesh.uv = uvs;
+            //mesh.uv = uvs;
         }
 
         int currentVertIndex = 0;
 
-        for (int i = 0; i < points.Length; i++)
+        for (int i = 0; i < pointCount; i++)
         {
             Vector3[] circle = VertexRing(i);
             foreach (var vertex in circle)
@@ -331,29 +428,63 @@ using UnityEngine;
         }
 
         mesh.vertices = vertices;
-        mesh.colors = colors;
+        //mesh.colors = colors;
         mesh.RecalculateNormals();
         mesh.RecalculateTangents();
         mesh.RecalculateBounds();
 
-        //meshFilter.sharedMesh = mesh;
-
         return mesh;
     }
 
+    public Vector2[] GenerateUVs()
+    {
+        var uvs = new Vector2[pointCount * radialSegments];
+        for(int segment = 0; segment < pointCount; segment++)
+        {
+            for(int side = 0; side < radialSegments; side++)
+            {
+                int vertIndex = (segment * radialSegments + side);
+                float u = side / (radialSegments - 1);
+                float v = (segment / (pointCount - 1f)) * (tiling * length);
+
+                uvs[vertIndex] = new Vector2(v,u);
+            }
+        }
+        return uvs;
+    }
+
+    public Color[] GenerateColors()
+    {
+        Color[] colors = new Color[pointCount * radialSegments];
+
+        float wireSamplePoint = 0;
+        for(int segment = 0; segment < pointCount; segment++)
+        {
+            wireSamplePoint = (float)segment / (float)(pointCount - 1);
+
+            for(int side = 0; side < radialSegments; side++)
+            {
+                int vertIndex = (segment * radialSegments + side);
+                //colors[vertIndex] = windData.Evaluate(wireSamplePoint);
+            }
+        }
+
+        return colors;
+    }
     public void Reset()
         {
-        mesh = new Mesh { name = "Wire Mesh" };
-        meshFilter = GetComponent<MeshFilter>();
+        if(mesh == null)
+        {
+            mesh = new Mesh { name = "Wire Mesh" };
+
+        }
+        if(meshFilter == null)
+        {
+            meshFilter = GetComponent<MeshFilter>();
+        }
+        CreateWire();
         meshFilter.mesh = GenerateMesh();
 
-            /*points = new Vector3[]
-            {
-            new Vector3(1f, 0f, 0f),
-            new Vector3(2f, 0f, 0f)
-            };
-            */
-        UpdateSpline();
-        GenerateMesh();
+        //GenerateMesh();
         }
     }

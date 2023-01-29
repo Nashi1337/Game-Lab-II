@@ -17,28 +17,36 @@ public class BezierSplineInspector : Editor
     private const float handleSize = 0.04f;
     private const float pickSize = 0.06f;
 
+    private float SagWeight = 2f;
+
     private int selectedIndex = -1;
 
-    SerializedProperty points;
-    SerializedProperty corners;
+    SerializedProperty radialSegments;
+    SerializedProperty diameter;
+    SerializedProperty weight;
 
     void OnEnable()
     {
-        points = serializedObject.FindProperty("points");
-        corners = serializedObject.FindProperty("corers");
+        radialSegments = serializedObject.FindProperty("radialSegments");
+        diameter = serializedObject.FindProperty("diameter");
+        weight = serializedObject.FindProperty("weight");
     }
 
     public override void OnInspectorGUI()
     {
         DrawDefaultInspector();
         spline = target as BezierSpline;
+        //serializedObject.Update();
         EditorGUI.BeginChangeCheck();
         if (EditorGUI.EndChangeCheck())
         {
             serializedObject.ApplyModifiedProperties();
-            spline.UpdateSpline();
+            //spline.UpdateSpline();
+            //serializedObject.Update();
+            SagWeight = serializedObject.FindProperty("weight").floatValue;
+            Debug.Log("sagWeight is " + SagWeight);
+            spline.SagMode(SagWeight);
             spline.GenerateMesh();
-            Debug.Log(spline.length);
             EditorUtility.SetDirty(spline);
         }
         if (selectedIndex >= 0 && selectedIndex < spline.ControlPointCount)
@@ -55,7 +63,7 @@ public class BezierSplineInspector : Editor
         if(GUILayout.Button("Activate sag mode"))
         {
             Undo.RecordObject(spline, "Active sag mode");
-            spline.SagMode();
+            spline.SagMode(0.2f);
             EditorUtility.SetDirty(spline);
             spline.GenerateMesh();
         }
@@ -73,6 +81,7 @@ public class BezierSplineInspector : Editor
             spline.UpdateSpline();
             spline.GenerateMesh();
         }
+        spline.GenerateMesh();
     }
 
     private void OnSceneGUI()
@@ -108,8 +117,8 @@ public class BezierSplineInspector : Editor
         if (EditorGUI.EndChangeCheck())
         {
             //spline.UpdateSpline();
-            spline.UpdateMesh();
-            //spline.GenerateMesh();
+            //spline.UpdateMesh();
+            spline.GenerateMesh();
         }
     }
 
@@ -123,6 +132,7 @@ public class BezierSplineInspector : Editor
             Undo.RecordObject(spline, "Move Point");
             EditorUtility.SetDirty(spline);
             spline.SetControlPoint(selectedIndex, point);
+            spline.GenerateMesh();
         }
     }
     private void ShowDirections()
@@ -146,7 +156,7 @@ public class BezierSplineInspector : Editor
         {
             size *= 2f;
         }
-        Handles.color = Color.black;
+        Handles.color = Color.white;
         if (Handles.Button(point, handleRotation, size * handleSize, size * pickSize, Handles.DotHandleCap))
         {
             selectedIndex = index;
@@ -161,7 +171,7 @@ public class BezierSplineInspector : Editor
                 Undo.RecordObject(spline, "MovePoint");
                 EditorUtility.SetDirty(spline);
                 spline.SetControlPoint(index, handleTransform.InverseTransformPoint(point));
-
+                spline.GenerateMesh();
             }
         }
         return point;
