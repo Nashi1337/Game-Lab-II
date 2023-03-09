@@ -1,10 +1,11 @@
 using UnityEngine;
 using UnityEditor;
 using UnityEditor.EditorTools;
+using System.Linq;
 
-namespace WireGenerator
+namespace WireGeneratorPathfinding
 {
-    [CustomEditor(typeof(Wire))]
+    [CustomEditor(typeof(WirePathfinding))]
     public class WireEditorPathfinding : Editor
     {
         SerializedProperty radius;
@@ -22,7 +23,7 @@ namespace WireGenerator
 
         public void OnSceneGUI()
         {
-            Wire wire = target as Wire;
+            WirePathfinding wire = target as WirePathfinding;
             Handles.color = new Color(1.00f, 0.498f, 0.314f);
             for (int i = 0; i < wire.points.Count;i++)
             {
@@ -35,33 +36,19 @@ namespace WireGenerator
         }
         public override void OnInspectorGUI()
         {
-            Wire wire = target as Wire;
+            WirePathfinding wire = target as WirePathfinding;
 
             EditorGUILayout.LabelField("Select the Wire Tool in the toolbar to edit control points in Scene View");
 
-            //pointsDetails =EditorGUILayout.BeginFoldoutHeaderGroup(pointsDetails, "Control Points Details");
             EditorGUI.BeginChangeCheck();
 
-            /*if (pointsDetails)
+            if (GUILayout.Button("Find Path"))
             {
-
-                for(int i=0; i < wire.points.Count)
-                {
-                    if (i != 0)
-                    {
-                        EditorGUILayout.Space();
-                    }
-                    EditorGUILayout.BeginVertical();
-                    EditorGUILayout.PropertyField(offsetPoint1);
-                    //EditorGUILayout.PropertyField(useAnchor1);
-                    wire.points[i].useAnchor = EditorGUILayout.BeginToggleGroup("Use Anchor", wire..points[i].useAnchor);
-                    EditorGUILayout.PropertyField(anchorTransform1);
-                    EditorGUILayout.EndToggleGroup();
-                    EditorGUILayout.EndVertical();
-                }
+                Undo.RecordObject(wire, "Find Path");
+                Debug.Log("Start Point is: " + wire.points[0].anchorTransform.position);
+                Debug.Log("End Point is: " + wire.points[wire.points.Count() - 1].anchorTransform.position);
+                wire.FindPath();
             }
-            EditorGUILayout.EndFoldoutHeaderGroup();
-            */
 
             EditorGUILayout.PropertyField(points);
 
@@ -75,12 +62,12 @@ namespace WireGenerator
         }
     }
 
-    [EditorTool("Wire Tool", typeof(Wire))]
+    [EditorTool("Wire Tool", typeof(WirePathfinding))]
     class WireTool: EditorTool, IDrawSelectedHandles
     {
         public override void OnToolGUI(EditorWindow window)
         {
-            Wire wire = target as Wire;
+            WirePathfinding wire = target as WirePathfinding;
             EditorGUI.BeginChangeCheck();
             for (int i = 0; i < wire.points.Count;i++)
             {
