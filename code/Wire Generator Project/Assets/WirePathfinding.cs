@@ -110,7 +110,7 @@ namespace WireGeneratorPathfinding
 
                 if(distanceZ > 0)
                 {
-
+                    points.Add(new ControlPoint(points[points.Count - 1].offset + new Vector3(0, 0, distanceZ)));
                 }
                 else if(distanceZ < 0)
                 {
