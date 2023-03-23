@@ -42,12 +42,24 @@ namespace WireGeneratorPathfinding
 
             EditorGUI.BeginChangeCheck();
 
+            if(GUILayout.Button("Find Start and End Points"))
+            {
+                wire.points[0].anchorTransform = GameObject.FindGameObjectWithTag("startPoint").transform;
+                wire.points[wire.points.Count() - 1].anchorTransform = GameObject.FindGameObjectWithTag("endPoint").transform;
+                //Debug.Log("Found Start point at " + wire.startPoint.transform.position);
+            }
+
             if (GUILayout.Button("Find Path"))
             {
                 Undo.RecordObject(wire, "Find Path");
                 Debug.Log("Start Point is: " + wire.points[0].anchorTransform.position);
                 Debug.Log("End Point is: " + wire.points[wire.points.Count() - 1].anchorTransform.position);
                 wire.FindPath();
+            }
+            if(GUILayout.Button("Find Path Along Wall"))
+            {
+                Undo.RecordObject(wire, "Find Path Along Wall");
+                wire.castRay();
             }
 
             EditorGUILayout.PropertyField(points);
