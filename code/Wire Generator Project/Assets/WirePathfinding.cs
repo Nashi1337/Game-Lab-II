@@ -140,149 +140,124 @@ namespace WireGeneratorPathfinding
                 float startToEndX = endPoint.position.x - startPoint.position.x;
                 float startToEndY = endPoint.position.y - startPoint.position.y;
                 float startToEndZ = endPoint.position.z - startPoint.position.z;
+                Debug.Log("X: " + startToEndX + " Y: " + startToEndY + " Z: " + startToEndZ);
                 Vector3 spacingZ = new Vector3(0, 0, 0.2f);
 
                 wall = Physics.OverlapSphere(points[0].offset, 1f);
-                points[0].offset = wall[0].ClosestPoint(points[0].offset) + spacingZ;
+                points[0].offset = new Vector3(0, 0, 0);
 
-                wall = new Collider[0];
 
+                wall = Physics.OverlapSphere(points[0].offset, 1f);
+                points[1].offset = wall[0].ClosestPoint(points[0].offset) - spacingZ;
+
+                points.Add(new ControlPoint(new Vector3(0, 0, 0)));
                 float remainingDistanceX = startToEndX;
-                while(wall.Length == 0)
+                Vector3 currPosition = points[1].offset;
+                float tick = 0f;
+
+                for(tick = 0.2f; tick <= remainingDistanceX; tick += 0.2f)
                 {
-                    wall = Physics.OverlapSphere(points[0].offset + new Vector3(remainingDistanceX, 0, 0),1f);
-                    if(wall.Length > 0)
+                    currPosition = points[1].offset + new Vector3(tick, 0, 0);
+                    //Debug.Log("Current tick is: " + tick);
+                    //Debug.Log("Current position is: " + currPosition);
+                    if(Physics.Raycast(transform.TransformPoint(currPosition),transform.forward, 0.5f))
                     {
-                        points[1].offset = wall[0].ClosestPoint(points[0].offset + new Vector3(remainingDistanceX, 0, 0)) + spacingZ;
-                        points[1].offset.z = spacingZ.z;
-                        Debug.Log("wall.Length is :" + wall.Length);
+                        //Debug.Log("hit wall");
+                        Debug.DrawRay(transform.TransformPoint(currPosition), transform.forward * 0.5f, Color.red, 10, true);
                     }
                     else
                     {
-                        remainingDistanceX = remainingDistanceX / 2;
-                        Debug.Log("Halfing remaining Distance on X to: " + remainingDistanceX);
+                        //Debug.Log("hit no wall");
+                        Debug.DrawRay(transform.TransformPoint(currPosition), transform.forward * 0.5f, Color.yellow, 10, true);
+                        points[2].offset = (currPosition);
+                        break;
                     }
                 }
-                bool bodenlos = false;
-                float tick = 0.1f;
-                while(bodenlos == false)
+
+                Ray ray = new Ray(points[2].offset, transform.forward);
+                RaycastHit hitData;
+                Physics.Raycast(ray, out hitData);
+                Vector3 hitPosition = hitData.point;
+
+                for(tick = 0.2f; tick <= hitPosition.z; tick += 0.2f)
                 {
-                    if(Physics.OverlapSphere(points[1].offset + new Vector3(tick,0,0),0.3f).Length > 0)
+                    currPosition = points[2].offset + new Vector3(0, 0, tick);
+                    Debug.Log("Current tick is: " + tick);
+                    Debug.Log("Current position is: " + currPosition);
+                    Debug.Log("Remaining distance is: " + (hitPosition.z - tick));
+                    if (Physics.Raycast(transform.TransformPoint(currPosition), Vector3.left, 0.5f))
                     {
-                        Debug.Log("tick is " + tick);
-                        tick += 0.1f;
+                        Debug.Log("hit side wall");
+                        Debug.DrawRay(transform.TransformPoint(currPosition), Vector3.left * 0.5f, Color.red, 10, true);
+                        Debug.DrawRay(transform.TransformPoint(currPosition), Vector3.forward * 0.2f, Color.red, 10, true);
+                        if (Physics.Raycast(transform.TransformPoint(currPosition), Vector3.forward, 0.5f))
+                        {
+                            Debug.Log("hit back wall");
+                            Debug.Log(Vector3.Distance(currPosition, endPoint.transform.position));
+                            points.Add(new ControlPoint(currPosition));
+                            break;
+                        }
                     }
                     else
                     {
-                        points[1].offset += new Vector3(tick, 0, 0);
-                        bodenlos = true;
+                        Debug.Log("hit no wall");
+                        Debug.DrawRay(transform.TransformPoint(currPosition), Vector3.left * 0.5f, Color.yellow, 10, true);
                     }
                 }
+                ray = new Ray(points[3].offset, transform.right);
+                if(Physics.Raycast(ray, out hitData))
+                {
+                    Debug.Log("Found obstacle");
+                    hitPosition = hitData.point;
+                    for(tick = 0.2f; tick <= hitPosition.x; tick+=0.2f)
+                    {
+                        Debug.Log("first tick");
+                    }
+                }
+                else
+                {
+                    Debug.Log("Found no obstacle");
+                    points.Add(new ControlPoint(points[3].offset + new Vector3(endPoint.transform.position.x - transform.TransformPoint(points[3].offset).x, 0, 0)));
+                }
 
+                ray = new Ray(points[4].offset, transform.up);
+                if(Physics.Raycast(ray, out hitData))
+                {
+                    Debug.Log("Found obstacle");
+                    hitPosition = hitData.point;
+                    for(tick = 0.2f; tick <= hitPosition.x; tick+= 0.2f)
+                    {
+                        Debug.Log("first tick");
+                    }
+                }
+                else
+                {
+                    Debug.Log("Found no obstacle");
+                    points.Add(new ControlPoint(points[4].offset + new Vector3(0, endPoint.transform.position.y - transform.TransformPoint(points[4].offset).y, 0)));
+                }
 
-                points.Add(new ControlPoint(points[1].offset));
-                points[2].offset.z = endPoint.transform.position.z;
+                ray = new Ray(points[5].offset, Vector3.back);
+                if(Physics.Raycast(ray, out hitData))
+                {
+                    Debug.Log("Found obstacle");
+                    hitPosition = hitData.point;
+                    for (tick = 0.2f; tick <= hitPosition.x; tick += 0.2f)
+                    {
+                        Debug.Log("first tick");
+                    }
+                }
+                else
+                {
+                    Debug.Log("Found no obstacle");
+                    points.Add(new ControlPoint(points[5].offset + new Vector3(0, 0, endPoint.transform.position.z - transform.TransformPoint(points[5].offset).z)));
+                }
 
-                points.Add(new ControlPoint(points[2].offset + new Vector3(0, startToEndY, 0)));
-
-                //points.Add(new ControlPoint(points[3].offset + new Vector3(remainingDistanceX, 0, 0)));
-                // off by .7 on x axis
-
-                points.Add(new ControlPoint(endPoint.transform.position));
             }
 
             if (points[points.Count - 1].offset == endPoint.transform.position)
             {
                 Debug.Log("Goal reached");
             }
-
-            //float wallPosX = wall[0].transform.position.x;
-            //float wallPosY = wall[0].transform.position.y;
-            //float wallPosZ = wall[0].transform.position.z;
-
-            //if (points.Count == 2)
-            //{
-            //    float PosX = points[1].position.x;
-            //    float PosY = points[1].position.y;
-            //    float PosZ = points[1].position.z;
-
-            //    float distanceX = PosX - wallPosX;
-            //    float distanceY = PosY - wallPosY;
-            //    float distanceZ = PosZ - wallPosZ;
-            //    //Debug.Log("PosX - wallPosX = " + distanceX + ", PosY - wallPosY = " + distanceY + ", PosZ - wallPosZ = " + distanceZ);
-
-            //    if(PosX - wallPosX <= PosY - wallPosY &&
-            //        PosX - wallPosX <= PosZ - wallPosZ)
-            //    {
-            //        points[1].offset.x += wallPosX;
-            //    }
-            //    else if (PosY - wallPosY <= PosX - wallPosX &&
-            //        PosY - wallPosY <= PosZ - wallPosZ)
-            //    {
-            //        points[1].offset.y += wallPosY;
-            //    }
-            //    else
-            //    {
-            //        points[1].offset = new Vector3(0, 0, wallPosZ - 0.2f);
-            //    }
-
-            //    distanceX = points[points.Count - 1].offset.x + endPoint.transform.position.x;
-            //    bool touchy = false;
-            //    bool ende = false;
-            //    while(ende==false)
-            //    {
-            //        while (touchy==false)
-            //        {
-            //            //Distance to next point on x axis
-            //            Collider[] wallForNewPoint = Physics.OverlapSphere(points[points.Count - 1].offset + new Vector3(distanceX, 0, 0), 1f);
-            //            //Debug.Log(wallForNewPoint.Length);
-            //            if (wallForNewPoint.Length>0){
-            //                //Debug.Log("Collider gefunden bei " + wallForNewPoint[0].transform.position);
-            //                points.Add(new ControlPoint(points[points.Count-1].offset + new Vector3(distanceX, 0, 0)));
-            //                touchy = true;
-            //            }
-            //            else
-            //            {
-            //                distanceX = distanceX / 2;
-            //            }
-            //        }
-            //        if(points[points.Count-1].offset.y != endPoint.transform.position.y)
-            //        {
-            //            Collider[] wallForNewPoint = Physics.OverlapSphere(points[points.Count-1].offset + new Vector3(0, points[points.Count - 1].offset.y + endPoint.transform.position.y,0), 1f);
-            //            if(wallForNewPoint.Length > 0)
-            //            {
-            //                points.Add(new ControlPoint(points[points.Count - 1].offset + new Vector3(0, points[points.Count - 1].offset.y + endPoint.transform.position.y, 0)));
-            //            }
-            //        }
-            //        if(points[points.Count - 1].offset == endPoint.transform.position)
-            //        {
-            //            Debug.Log("Ziel erreicht");
-            //        }
-            //        if (points[points.Count - 1].offset.x != endPoint.transform.position.y)
-            //        {
-            //            Collider[] wallForNewPoint = new Collider[1];
-            //            distanceX = endPoint.transform.position.x - points[points.Count - 1].offset.x;
-            //            do
-            //            {
-            //                wallForNewPoint = Physics.OverlapSphere(points[points.Count - 1].offset + new Vector3(distanceX, 0, 0), 1f);
-            //                Debug.Log("DistanceX is currently : " + distanceX);
-            //                Debug.Log("Number of collided walls is " + wallForNewPoint.Length);
-            //                if (wallForNewPoint.Length > 0)
-            //                {
-            //                    Debug.Log("Wall found");
-            //                    points.Add(new ControlPoint(points[points.Count - 1].offset + new Vector3(distanceX, 0, 0)));
-            //                }
-            //                else
-            //                {
-            //                    distanceX = distanceX / 2;
-            //                }
-            //            }
-            //            while (wallForNewPoint.Length > 0);
-            //        }
-            //        ende = true;
-            //    }
-            //}
-
         }
         public Vector3 GetPosition(int i) {
             return (points[i].useAnchor && points[i].anchorTransform ? points[i].anchorTransform : transform).position + points[i].offset;
