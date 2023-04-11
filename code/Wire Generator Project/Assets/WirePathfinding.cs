@@ -13,7 +13,6 @@ namespace WireGeneratorPathfinding
         public class ControlPoint
         {
             public Vector3 offset;
-            public Vector3 position;
             public bool useAnchor;
             public Transform anchorTransform;
 
@@ -24,12 +23,15 @@ namespace WireGeneratorPathfinding
             }
         }
 
-        public Transform startPoint;
-        public Transform endPoint;
+        public Vector3 startPoint;
+        public Vector3 endPoint;
 
         float distanceX;
         float distanceY;
         float distanceZ;
+        Vector3 spacingZ = new Vector3(0, 0, 0.2f);
+
+        Vector3 nullVector = new Vector3(0, 0, 0);
 
         [SerializeField]
         float weight = 1f;
@@ -40,15 +42,17 @@ namespace WireGeneratorPathfinding
         MeshFilter meshFilter;
         public List<ControlPoint> points = new List<ControlPoint>() { new ControlPoint(new Vector3(0,0,0)), new ControlPoint(new Vector3(1, 0, 0))};
         float lengthFactor = 1f;
-        public float radius=0.02f;
+        public float radius=2f;
         public int corners=6;
         float CalculateWireSag(float gravity, float t)
         {
             return gravity * -Mathf.Sin(t * Mathf.PI);
         }
 
-        private void Reset()
+        public void Reset()
         {
+            points = new List<ControlPoint>() { new ControlPoint(new Vector3(0, 0, 0)), new ControlPoint(new Vector3(1, 0, 0)) };
+
             mesh = new Mesh{name = "Wire"};
             meshFilter=GetComponent<MeshFilter>();
 
@@ -60,17 +64,15 @@ namespace WireGeneratorPathfinding
 
         public void FindPath()
         {
-            //castRay();
-
-            startPoint = points[0].anchorTransform;
-            endPoint = points[points.Count - 1].anchorTransform;
-            points[0].position = startPoint.position;
-            points[points.Count - 1].position = endPoint.position;
+            startPoint = points[0].anchorTransform.position;
+            endPoint = points[points.Count - 1].anchorTransform.position;
+            points[0].offset = startPoint;
+            points[points.Count - 1].offset = endPoint;
             if (startPoint != endPoint)
             {
-                distanceX = endPoint.position.x - startPoint.position.x;
-                distanceY = endPoint.position.y - startPoint.position.y;
-                distanceZ = endPoint.position.z - startPoint.position.z;
+                distanceX = endPoint.x - startPoint.x;
+                distanceY = endPoint.y - startPoint.y;
+                distanceZ = endPoint.z - startPoint.z;
                 Debug.Log("Distanz auf X Achse ist: " + distanceX);
                 Debug.Log("Distanz auf Y Achse ist: " + distanceY);
                 Debug.Log("Distanz auf Z Achse ist: " + distanceZ);
@@ -128,133 +130,110 @@ namespace WireGeneratorPathfinding
             }
         }
 
+        public void FindStartEnd()
+        {
+            points[0].anchorTransform = GameObject.FindGameObjectWithTag("startPoint").transform;
+            points[1].anchorTransform = GameObject.FindGameObjectWithTag("endPoint").transform;
+        }
+
+        public Vector3 CalculateStartToEnd(Vector3 start, Vector3 end)
+        {
+            return end - start;
+        }
+
+        public Vector3 NextPoint(float endPoint, Vector3 currentPosition, Vector3 direction, Vector3 rayDirection, int point)
+        {
+            for(float tick = 0.2f; tick <= endPoint;tick += 0.2f)
+            {
+                Vector3 offset = tick * direction;
+                currentPosition = points[point].offset +  offset;
+                if (!Physics.Raycast(transform.TransformPoint(currentPosition), rayDirection, 0.5f))
+                {
+                    break;
+                }
+                Debug.DrawRay(transform.TransformPoint(currentPosition), rayDirection * 0.5f, Color.red, 10, true);
+            }
+            return currentPosition;
+        }
+
+        public Vector3 CheckObstacle(Vector3 start, Vector3 direction)
+        {
+            Ray ray = new Ray(start, direction);
+            Physics.Raycast(ray, out RaycastHit hitData);
+            return hitData.point;
+        }
         public void castRay()
         {
             Collider[] wall = new Collider[1];
 
-            if (points[0].anchorTransform != null && points[points.Count - 1].anchorTransform != null)
+            if (points[0].anchorTransform != null && points[1].anchorTransform != null)
             {
-                startPoint = points[0].anchorTransform;
-                endPoint = points[points.Count - 1].anchorTransform;
-                this.transform.position = startPoint.position;
-                float startToEndX = endPoint.position.x - startPoint.position.x;
-                float startToEndY = endPoint.position.y - startPoint.position.y;
-                float startToEndZ = endPoint.position.z - startPoint.position.z;
-                Debug.Log("X: " + startToEndX + " Y: " + startToEndY + " Z: " + startToEndZ);
-                Vector3 spacingZ = new Vector3(0, 0, 0.2f);
-
-                wall = Physics.OverlapSphere(points[0].offset, 1f);
-                points[0].offset = new Vector3(0, 0, 0);
-
+                startPoint = points[0].anchorTransform.position;
+                endPoint = points[1].anchorTransform.position;
+                this.transform.position = startPoint;
 
                 wall = Physics.OverlapSphere(points[0].offset, 1f);
                 points[1].offset = wall[0].ClosestPoint(points[0].offset) - spacingZ;
 
-                points.Add(new ControlPoint(new Vector3(0, 0, 0)));
-                float remainingDistanceX = startToEndX;
-                Vector3 currPosition = points[1].offset;
-                float tick = 0f;
-
-                for(tick = 0.2f; tick <= remainingDistanceX; tick += 0.2f)
-                {
-                    currPosition = points[1].offset + new Vector3(tick, 0, 0);
-                    //Debug.Log("Current tick is: " + tick);
-                    //Debug.Log("Current position is: " + currPosition);
-                    if(Physics.Raycast(transform.TransformPoint(currPosition),transform.forward, 0.5f))
-                    {
-                        //Debug.Log("hit wall");
-                        Debug.DrawRay(transform.TransformPoint(currPosition), transform.forward * 0.5f, Color.red, 10, true);
-                    }
-                    else
-                    {
-                        //Debug.Log("hit no wall");
-                        Debug.DrawRay(transform.TransformPoint(currPosition), transform.forward * 0.5f, Color.yellow, 10, true);
-                        points[2].offset = (currPosition);
-                        break;
-                    }
-                }
+                points.Add(new ControlPoint(NextPoint(endPoint.x,points[1].offset,Vector3.right,Vector3.forward,1)));
 
                 Ray ray = new Ray(points[2].offset, transform.forward);
-                RaycastHit hitData;
-                Physics.Raycast(ray, out hitData);
+                Physics.Raycast(ray, out RaycastHit hitData);
                 Vector3 hitPosition = hitData.point;
+                //Debug.DrawRay(transform.TransformPoint(points[2].offset), Vector3.forward*10f, Color.red, 10, true);
+                points.Add(
+                    new ControlPoint(
+                        NextPoint(
+                            CheckObstacle(points[2].offset,Vector3.forward).z-2*spacingZ.z,
+                            points[2].offset, 
+                            Vector3.forward,Vector3.left,2)));
 
-                for(tick = 0.2f; tick <= hitPosition.z; tick += 0.2f)
-                {
-                    currPosition = points[2].offset + new Vector3(0, 0, tick);
-                    Debug.Log("Current tick is: " + tick);
-                    Debug.Log("Current position is: " + currPosition);
-                    Debug.Log("Remaining distance is: " + (hitPosition.z - tick));
-                    if (Physics.Raycast(transform.TransformPoint(currPosition), Vector3.left, 0.5f))
-                    {
-                        Debug.Log("hit side wall");
-                        Debug.DrawRay(transform.TransformPoint(currPosition), Vector3.left * 0.5f, Color.red, 10, true);
-                        Debug.DrawRay(transform.TransformPoint(currPosition), Vector3.forward * 0.2f, Color.red, 10, true);
-                        if (Physics.Raycast(transform.TransformPoint(currPosition), Vector3.forward, 0.5f))
-                        {
-                            Debug.Log("hit back wall");
-                            Debug.Log(Vector3.Distance(currPosition, endPoint.transform.position));
-                            points.Add(new ControlPoint(currPosition));
-                            break;
-                        }
-                    }
-                    else
-                    {
-                        Debug.Log("hit no wall");
-                        Debug.DrawRay(transform.TransformPoint(currPosition), Vector3.left * 0.5f, Color.yellow, 10, true);
-                    }
-                }
-                ray = new Ray(points[3].offset, transform.right);
-                if(Physics.Raycast(ray, out hitData))
+                if (CheckObstacle(points[3].offset, Vector3.right)!=nullVector)
                 {
                     Debug.Log("Found obstacle");
-                    hitPosition = hitData.point;
-                    for(tick = 0.2f; tick <= hitPosition.x; tick+=0.2f)
+                    for(float tick = 0.2f; tick <= CheckObstacle(points[3].offset, Vector3.right).x; tick+=0.2f)
                     {
-                        Debug.Log("first tick");
+                        //TODO: Was passiert wenn ein Hindernis auf dem Weg liegt?
                     }
                 }
                 else
                 {
-                    Debug.Log("Found no obstacle");
-                    points.Add(new ControlPoint(points[3].offset + new Vector3(endPoint.transform.position.x - transform.TransformPoint(points[3].offset).x, 0, 0)));
+                    points.Add(new ControlPoint(points[3].offset + new Vector3(endPoint.x - transform.TransformPoint(points[3].offset).x, 0, 0)));
                 }
 
-                ray = new Ray(points[4].offset, transform.up);
-                if(Physics.Raycast(ray, out hitData))
+                if(CheckObstacle(points[4].offset, Vector3.up) != nullVector)
                 {
                     Debug.Log("Found obstacle");
-                    hitPosition = hitData.point;
-                    for(tick = 0.2f; tick <= hitPosition.x; tick+= 0.2f)
+                    for(float tick = 0.2f; tick <= CheckObstacle(points[4].offset, Vector3.up).x; tick+= 0.2f)
                     {
-                        Debug.Log("first tick");
+                        //TODO: Was passiert wenn ein hindernis auf dem Weg liegt?
                     }
                 }
                 else
                 {
-                    Debug.Log("Found no obstacle");
-                    points.Add(new ControlPoint(points[4].offset + new Vector3(0, endPoint.transform.position.y - transform.TransformPoint(points[4].offset).y, 0)));
+                    points.Add(new ControlPoint(points[4].offset + new Vector3(0, endPoint.y - transform.TransformPoint(points[4].offset).y, 0)));
                 }
 
-                ray = new Ray(points[5].offset, Vector3.back);
-                if(Physics.Raycast(ray, out hitData))
+                if(CheckObstacle(points[5].offset, Vector3.back)!=nullVector)
                 {
                     Debug.Log("Found obstacle");
-                    hitPosition = hitData.point;
-                    for (tick = 0.2f; tick <= hitPosition.x; tick += 0.2f)
+                    for (float tick = 0.2f; tick <= CheckObstacle(points[5].offset, Vector3.back).x; tick += 0.2f)
                     {
-                        Debug.Log("first tick");
+                        //TODO: Was passiert wenn ein hindernis auf dem Weg liegt?
                     }
                 }
                 else
                 {
-                    Debug.Log("Found no obstacle");
-                    points.Add(new ControlPoint(points[5].offset + new Vector3(0, 0, endPoint.transform.position.z - transform.TransformPoint(points[5].offset).z)));
+                    points.Add(new ControlPoint(points[5].offset + new Vector3(0, 0, endPoint.z - transform.TransformPoint(points[5].offset).z)));
                 }
 
             }
-
-            if (points[points.Count - 1].offset == endPoint.transform.position)
+            else
+            {
+                FindStartEnd();
+                castRay();
+            }
+            if (points[points.Count - 1].offset == endPoint)
             {
                 Debug.Log("Goal reached");
             }
@@ -308,7 +287,7 @@ namespace WireGeneratorPathfinding
                     startpointVertice = Vector3.Cross(tangent, helpVector).normalized;
                 }
 
-                startpointVertice *= radius;
+                startpointVertice *= radius/100;
 
 
                 var offsetCircle=Quaternion.AngleAxis(360f / corners, tangent);
