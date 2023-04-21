@@ -47,18 +47,10 @@ namespace WireGeneratorPathfinding
                 Undo.RecordObject(wire, "Find Start and End Points");
                 wire.FindStartEnd();
             }
-
-            if (GUILayout.Button("Find Path"))
-            {
-                Undo.RecordObject(wire, "Find Path");
-                Debug.Log("Start Point is: " + wire.points[0].anchorTransform.position);
-                Debug.Log("End Point is: " + wire.points[wire.points.Count() - 1].anchorTransform.position);
-                wire.FindPath();
-            }
             if(GUILayout.Button("Find Path Along Wall"))
             {
                 Undo.RecordObject(wire, "Find Path Along Wall");
-                wire.castRay();
+                wire.FindPath();
             }
             if (GUILayout.Button("Reset"))
             {

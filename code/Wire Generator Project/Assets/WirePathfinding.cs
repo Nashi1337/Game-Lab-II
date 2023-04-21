@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 namespace WireGeneratorPathfinding
@@ -31,8 +32,6 @@ namespace WireGeneratorPathfinding
         float distanceZ;
         Vector3 spacingZ = new Vector3(0, 0, 0.2f);
 
-        Vector3 nullVector = new Vector3(0, 0, 0);
-
         [SerializeField]
         float weight = 1f;
         [SerializeField]
@@ -61,85 +60,16 @@ namespace WireGeneratorPathfinding
             float minimum = CalculateWireSag(sag, 0.5f);
             GenerateMesh();
         }
-
-        public void FindPath()
-        {
-            startPoint = points[0].anchorTransform.position;
-            endPoint = points[points.Count - 1].anchorTransform.position;
-            points[0].offset = startPoint;
-            points[points.Count - 1].offset = endPoint;
-            if (startPoint != endPoint)
-            {
-                distanceX = endPoint.x - startPoint.x;
-                distanceY = endPoint.y - startPoint.y;
-                distanceZ = endPoint.z - startPoint.z;
-                Debug.Log("Distanz auf X Achse ist: " + distanceX);
-                Debug.Log("Distanz auf Y Achse ist: " + distanceY);
-                Debug.Log("Distanz auf Z Achse ist: " + distanceZ);
-                points[0].offset.x = this.transform.position.x - distanceX;
-
-
-                if (distanceX > 0)
-                {
-                    //points.Add(new ControlPoint(points[0].offset + new Vector3(distanceX,0,0)));
-                    points[points.Count - 1].offset = new Vector3 (points[0].offset.x + distanceX, 0, 0);
-                }
-                else if(distanceX < 0)
-                {
-
-                }
-                else
-                {
-                    foreach (var point in points)
-                    {
-                        point.offset.x = 0;
-                    }
-                }
-
-                if(distanceY > 0)
-                {
-                    points.Add(new ControlPoint(points[points.Count - 1].offset + new Vector3(0, distanceY, 0)));
-                }
-                else if(distanceY < 0)
-                {
-
-                }
-                else
-                {
-                    foreach (var point in points)
-                    {
-                        point.offset.y = 0;
-                    }
-                }
-
-                if(distanceZ > 0)
-                {
-                    points.Add(new ControlPoint(points[points.Count - 1].offset + new Vector3(0, 0, distanceZ)));
-                }
-                else if(distanceZ < 0)
-                {
-
-                }
-                else
-                {
-                    foreach(var point in points)
-                    {
-                        point.offset.z = 0;
-                    }
-                }
-            }
-        }
-
         public void FindStartEnd()
         {
             points[0].anchorTransform = GameObject.FindGameObjectWithTag("startPoint").transform;
             points[1].anchorTransform = GameObject.FindGameObjectWithTag("endPoint").transform;
         }
 
-        public Vector3 CalculateStartToEnd(Vector3 start, Vector3 end)
-        {
-            return end - start;
-        }
+        //public Vector3 CalculateStartToEnd(Vector3 start, Vector3 end)
+        //{
+        //    return end - start;
+        //}
 
         public Vector3 NextPoint(float endPoint, Vector3 currentPosition, Vector3 direction, Vector3 rayDirection, int point)
         {
@@ -156,15 +86,20 @@ namespace WireGeneratorPathfinding
             return currentPosition;
         }
 
-        public Vector3 CheckObstacle(Vector3 start, Vector3 direction)
+        public RaycastHit CastRay(Vector3 start, Vector3 direction)
         {
-            Ray ray = new Ray(start, direction);
-            Physics.Raycast(ray, out RaycastHit hitData);
-            return hitData.point;
+            Ray ray = new Ray(transform.TransformPoint(start), direction);
+            Physics.Raycast(ray, out RaycastHit hitData, Mathf.Infinity);
+            return hitData;
         }
-        public void castRay()
+
+        public float CalculateDifference(float endPoint, float startPoint)
         {
-            Collider[] wall = new Collider[1];
+            return endPoint - startPoint;
+        }
+        public void FindPath()
+        {
+            Collider[] wall;
 
             if (points[0].anchorTransform != null && points[1].anchorTransform != null)
             {
@@ -175,7 +110,18 @@ namespace WireGeneratorPathfinding
                 wall = Physics.OverlapSphere(points[0].offset, 1f);
                 points[1].offset = wall[0].ClosestPoint(points[0].offset) - spacingZ;
 
+                Debug.DrawRay(transform.TransformPoint(points[1].offset), transform.right*100f, Color.blue, 10, true);
+                var obstacle = CastRay(points[1].offset, Vector3.right);
+                //Debug.Log(obstacle);
+
+                if(obstacle.point != null ) 
+                {
+                    Debug.Log(CalculateDifference(endPoint.y, points[1].offset.y));
+                    Debug.Log(obstacle.transform.gameObject.GetComponent<Renderer>().bounds.size);
+                }
+
                 points.Add(new ControlPoint(NextPoint(endPoint.x,points[1].offset,Vector3.right,Vector3.forward,1)));
+
 
                 Ray ray = new Ray(points[2].offset, transform.forward);
                 Physics.Raycast(ray, out RaycastHit hitData);
@@ -184,14 +130,14 @@ namespace WireGeneratorPathfinding
                 points.Add(
                     new ControlPoint(
                         NextPoint(
-                            CheckObstacle(points[2].offset,Vector3.forward).z-2*spacingZ.z,
+                            CastRay(points[2].offset,Vector3.forward).point.z-2*spacingZ.z,
                             points[2].offset, 
                             Vector3.forward,Vector3.left,2)));
 
-                if (CheckObstacle(points[3].offset, Vector3.right)!=nullVector)
+                if (CastRay(points[3].offset, Vector3.right).point!=Vector3.zero)
                 {
                     Debug.Log("Found obstacle");
-                    for(float tick = 0.2f; tick <= CheckObstacle(points[3].offset, Vector3.right).x; tick+=0.2f)
+                    for(float tick = 0.2f; tick <= CastRay(points[3].offset, Vector3.right).point.x; tick+=0.2f)
                     {
                         //TODO: Was passiert wenn ein Hindernis auf dem Weg liegt?
                     }
@@ -201,10 +147,10 @@ namespace WireGeneratorPathfinding
                     points.Add(new ControlPoint(points[3].offset + new Vector3(endPoint.x - transform.TransformPoint(points[3].offset).x, 0, 0)));
                 }
 
-                if(CheckObstacle(points[4].offset, Vector3.up) != nullVector)
+                if(CastRay(points[4].offset, Vector3.up).point != Vector3.zero)
                 {
                     Debug.Log("Found obstacle");
-                    for(float tick = 0.2f; tick <= CheckObstacle(points[4].offset, Vector3.up).x; tick+= 0.2f)
+                    for(float tick = 0.2f; tick <= CastRay(points[4].offset, Vector3.up).point.x; tick+= 0.2f)
                     {
                         //TODO: Was passiert wenn ein hindernis auf dem Weg liegt?
                     }
@@ -214,10 +160,10 @@ namespace WireGeneratorPathfinding
                     points.Add(new ControlPoint(points[4].offset + new Vector3(0, endPoint.y - transform.TransformPoint(points[4].offset).y, 0)));
                 }
 
-                if(CheckObstacle(points[5].offset, Vector3.back)!=nullVector)
+                if(CastRay(points[5].offset, Vector3.back).point!=Vector3.zero)
                 {
                     Debug.Log("Found obstacle");
-                    for (float tick = 0.2f; tick <= CheckObstacle(points[5].offset, Vector3.back).x; tick += 0.2f)
+                    for (float tick = 0.2f; tick <= CastRay(points[5].offset, Vector3.back).point.x; tick += 0.2f)
                     {
                         //TODO: Was passiert wenn ein hindernis auf dem Weg liegt?
                     }
@@ -231,7 +177,7 @@ namespace WireGeneratorPathfinding
             else
             {
                 FindStartEnd();
-                castRay();
+                FindPath();
             }
             if (points[points.Count - 1].offset == endPoint)
             {
