@@ -11,14 +11,19 @@ namespace WireGeneratorPathfinding
         SerializedProperty radius;
         SerializedProperty corners;
         SerializedProperty points;
+        SerializedProperty cornerPart;
+        SerializedProperty pipePart;
 
-        bool pointsDetails;
+        bool showWire;
 
         void OnEnable()
         {
             points = serializedObject.FindProperty("points");
             radius = serializedObject.FindProperty("radius");
             corners = serializedObject.FindProperty("corners");
+            cornerPart = serializedObject.FindProperty("cornerPart");
+            pipePart = serializedObject.FindProperty("pipePart");
+            showWire = true;
         }
 
         public void OnSceneGUI()
@@ -39,7 +44,7 @@ namespace WireGeneratorPathfinding
             WirePathfinding wire = target as WirePathfinding;
 
             EditorGUILayout.LabelField("Select the Wire Tool in the toolbar to edit control points in Scene View");
-
+            showWire = EditorGUILayout.Toggle("Show wire", showWire);
             EditorGUI.BeginChangeCheck();
 
             if(GUILayout.Button("Find Start and End Points"))
@@ -52,18 +57,34 @@ namespace WireGeneratorPathfinding
                 Undo.RecordObject(wire, "Find Path Along Wall");
                 wire.FindPath();
             }
+
+            if(GUILayout.Button("Create Pipe"))
+            {
+                Undo.RecordObject(wire, "Create Pipe");
+                wire.CreatePipe();
+            }
+            if(GUILayout.Button("Delete Pipe"))
+            {
+                Undo.RecordObject(wire, "Delete Pipe");
+                wire.DeletePipe();
+            }
             if (GUILayout.Button("Reset"))
             {
                 Undo.RecordObject(wire, "Reset");
                 wire.Reset();
             }
 
-            EditorGUILayout.PropertyField(points);
 
+            wire.ShowWire(showWire);
+
+            EditorGUILayout.PropertyField(points);
             EditorGUILayout.PropertyField(radius);
             EditorGUILayout.PropertyField(corners);
+            EditorGUILayout.PropertyField(cornerPart);
+            EditorGUILayout.PropertyField(pipePart);
 
             if (EditorGUI.EndChangeCheck()) {
+                wire.ShowWire(showWire);
                 serializedObject.ApplyModifiedProperties();
                 wire.GenerateMesh();
             }

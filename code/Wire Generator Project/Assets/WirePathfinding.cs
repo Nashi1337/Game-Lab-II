@@ -44,7 +44,9 @@ namespace WireGeneratorPathfinding
         float lengthFactor = 1f;
         public float radius=2f;
         public int corners=6;
-
+        public GameObject cornerPart;
+        public GameObject pipePart;
+        List<GameObject> pipeParts;
 
         float CalculateWireSag(float gravity, float t)
         {
@@ -93,11 +95,6 @@ namespace WireGeneratorPathfinding
             Ray ray = new Ray(transform.TransformPoint(start), direction);
             Physics.Raycast(ray, out RaycastHit hitData, Mathf.Infinity);
             return hitData;
-        }
-
-        public float CalculateDifference(float endPoint, float startPoint)
-        {
-            return endPoint - startPoint;
         }
 
         Vector3 GetLastPoint()
@@ -234,8 +231,6 @@ namespace WireGeneratorPathfinding
                                 Vector3.left,
                                 GetLastPointIndex())));
 
-                Debug.Log("I decided to create the " + GetLastPointIndex() + "th point at " + GetLastPoint());
-
                 //Repeat process on x axis for remaining distance
                 obstacle = CastRay(GetLastPoint(), Vector3.right);
                 if (obstacle.collider != null)
@@ -260,7 +255,7 @@ namespace WireGeneratorPathfinding
 
                 //Check if the endpoint is higher or lower than the last created point
                 Vector3 upOrDown;
-                if (endPoint.y > GetLastPoint().y)
+                if (endPoint.y > startPoint.y)
                 {
                     upOrDown = new Vector3(0, 1, 0);
                 }
@@ -268,6 +263,7 @@ namespace WireGeneratorPathfinding
                 {
                     upOrDown = new Vector3(0, -1, 0);
                 }
+
 
                 //Check if there is an obstacle on the remaining distance on y-axis
                 obstacle = CastRay(GetLastPoint(), upOrDown);
@@ -291,7 +287,7 @@ namespace WireGeneratorPathfinding
                         new ControlPoint(
                             new Vector3(
                                 GetLastPoint().x,
-                                endPoint.y,
+                                GetLastPoint().y - endPoint.y,
                                 GetLastPoint().z)));
                     points.Add(
                         new ControlPoint(
@@ -391,5 +387,41 @@ namespace WireGeneratorPathfinding
             mesh.triangles=tempTriangles;
             meshFilter.sharedMesh = mesh;
         }
+        public void ShowWire(bool showWire)
+        {
+            if (points[0].anchorTransform != null && points[1].anchorTransform != null)
+            {
+                if (showWire)
+                {
+                    points[0].anchorTransform.gameObject.GetComponent<MeshRenderer>().enabled = true;
+                    points[1].anchorTransform.gameObject.GetComponent<MeshRenderer>().enabled = true;
+                    this.gameObject.GetComponent<MeshRenderer>().enabled = true;
+                }
+                else
+                {
+                    points[0].anchorTransform.gameObject.GetComponent<MeshRenderer>().enabled = false;
+                    points[1].anchorTransform.gameObject.GetComponent<MeshRenderer>().enabled = false;
+                    this.gameObject.GetComponent<MeshRenderer>().enabled = false;
+                }
+            }
+        }
+
+        public void CreatePipe()
+        {
+            for(int i = 1; i < points.Count-1; i++)
+            {
+                pipeParts.Add(Instantiate(pipePart, transform.TransformPoint((points[i-1].offset + points[i].offset)/2), Quaternion.Euler(i*90,(i*4)*90, (i - 1) * 90), this.transform));
+                pipeParts.Add(Instantiate(cornerPart, transform.TransformPoint(points[i].offset), Quaternion.identity, this.transform));
+            }
+            pipeParts.Add(Instantiate(pipePart, transform.TransformPoint((points[points.Count-2].offset + GetLastPoint()) / 2), Quaternion.Euler(90, 0, 0), this.transform));
+        }
+        public void DeletePipe()
+        {
+            foreach (GameObject pipePart in pipeParts)
+            {
+                DestroyImmediate(pipePart);
+            }
+        }
     }
+
 }
