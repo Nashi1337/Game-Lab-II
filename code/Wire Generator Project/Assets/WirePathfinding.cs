@@ -287,7 +287,7 @@ namespace WireGeneratorPathfinding
                         new ControlPoint(
                             new Vector3(
                                 GetLastPoint().x,
-                                GetLastPoint().y - endPoint.y,
+                                endPoint.y,
                                 GetLastPoint().z)));
                     points.Add(
                         new ControlPoint(
@@ -410,7 +410,7 @@ namespace WireGeneratorPathfinding
         {
             for(int i = 1; i < points.Count-1; i++)
             {
-                pipeParts.Add(Instantiate(pipePart, transform.TransformPoint((points[i-1].offset + points[i].offset)/2), Quaternion.Euler(i*90,(i*4)*90, (i - 1) * 90), this.transform));
+                pipeParts.Add(Instantiate(pipePart, transform.TransformPoint((points[i-1].offset + points[i].offset)/2), Quaternion.Euler(i*90,(i*4)*90, (i - 1) * 90),this.transform));
                 pipeParts.Add(Instantiate(cornerPart, transform.TransformPoint(points[i].offset), Quaternion.identity, this.transform));
             }
             pipeParts.Add(Instantiate(pipePart, transform.TransformPoint((points[points.Count-2].offset + GetLastPoint()) / 2), Quaternion.Euler(90, 0, 0), this.transform));
