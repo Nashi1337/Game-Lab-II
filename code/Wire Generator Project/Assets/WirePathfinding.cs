@@ -51,6 +51,9 @@ namespace WireGeneratorPathfinding
         //Assumes mesh for straight parts is aligned with z-Axis
         [SerializeField] private Mesh straightMesh;
 
+        [SerializeField] private float curveSize = 0.1f;
+        [SerializeField] private Mesh curveMesh;
+
         float CalculateWireSag(float gravity, float t)
         {
             return gravity * -Mathf.Sin(t * Mathf.PI);
@@ -66,7 +69,7 @@ namespace WireGeneratorPathfinding
             float tension = weight * lengthFactor;
             float sag = tension + weight + sagOffset;
             float minimum = CalculateWireSag(sag, 0.5f);
-            GenerateMesh();
+            //GenerateMesh();
         }
         public void FindStartEnd()
         {
@@ -412,19 +415,41 @@ namespace WireGeneratorPathfinding
         public void GenerateStraightMeshes()
         {
             //Assumes mesh for straight parts is aligned with z-Axis
+            CombineInstance[] combineInstances = new CombineInstance[2*points.Count-3];
+
+            //Straight parts
             for (int i = 0; i < points.Count-1; i++)
             {
-                Vector3 position = (GetPosition(i) + GetPosition(i + 1)) / 2f;
+                Vector3 position = (GetPosition(i) + GetPosition(i + 1)) / 2f - transform.position;
                 Vector3 difference = -GetPosition(i) + GetPosition(i + 1);
                 Quaternion rotation = Quaternion.LookRotation(difference);
-                GameObject tempGameObject = new GameObject();
-                tempGameObject.transform.position = position;
-                tempGameObject.transform.rotation = rotation;
-                tempGameObject.AddComponent<MeshFilter>();
-                tempGameObject.AddComponent<MeshRenderer>();
-                tempGameObject.GetComponent<MeshFilter>().mesh = straightMesh;
-                tempGameObject.transform.localScale = new Vector3(radius/straightMesh.bounds.extents.x, radius / straightMesh.bounds.extents.y, difference.magnitude / straightMesh.bounds.size.z);
+                Vector3 scale = new Vector3(radius / straightMesh.bounds.extents.x, radius / straightMesh.bounds.extents.y, difference.magnitude / straightMesh.bounds.size.z);
+                
+                Matrix4x4 transformMatrix = Matrix4x4.TRS(position,rotation,scale);
+
+                combineInstances[i].mesh=straightMesh;
+                combineInstances[i].transform = transformMatrix;
             }
+
+            //Curve Parts(90°)
+            //Assumes Open end point toward +Z and +Y and quadratic bounds
+            for (int i = 1; i < points.Count -1; i++)
+            {
+                Vector3 position = GetPosition(i) - transform.position;
+                Vector3 differenceNext = -GetPosition(i) + GetPosition(i + 1);
+                Vector3 differencePrevious = -GetPosition(i) + GetPosition(i - 1);
+                Quaternion rotation = Quaternion.LookRotation(differenceNext,differencePrevious);
+                
+                Vector3 scale = Vector3.one*radius;
+
+                Matrix4x4 transformMatrix = Matrix4x4.TRS(position, rotation, scale);
+
+                combineInstances[i + points.Count - 2].mesh = curveMesh;
+                combineInstances[i + points.Count - 2].transform = transformMatrix;
+            }
+            Mesh mesh = new Mesh();
+            mesh.CombineMeshes(combineInstances);
+            meshFilter.sharedMesh = mesh;
         }
         public void CreatePipe()
         {
