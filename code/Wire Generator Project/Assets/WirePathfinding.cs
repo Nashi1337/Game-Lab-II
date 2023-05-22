@@ -48,6 +48,9 @@ namespace WireGeneratorPathfinding
         public GameObject pipePart;
         List<GameObject> pipeParts;
 
+        //Assumes mesh for straight parts is aligned with z-Axis
+        [SerializeField] private Mesh straightMesh;
+
         float CalculateWireSag(float gravity, float t)
         {
             return gravity * -Mathf.Sin(t * Mathf.PI);
@@ -406,14 +409,33 @@ namespace WireGeneratorPathfinding
             }
         }
 
+        public void GenerateStraightMeshes()
+        {
+            //Assumes mesh for straight parts is aligned with z-Axis
+            for (int i = 0; i < points.Count-1; i++)
+            {
+                Vector3 position = (GetPosition(i) + GetPosition(i + 1)) / 2f;
+                Vector3 difference = -GetPosition(i) + GetPosition(i + 1);
+                Quaternion rotation = Quaternion.LookRotation(difference);
+                GameObject tempGameObject = new GameObject();
+                tempGameObject.transform.position = position;
+                tempGameObject.transform.rotation = rotation;
+                tempGameObject.AddComponent<MeshFilter>();
+                tempGameObject.AddComponent<MeshRenderer>();
+                tempGameObject.GetComponent<MeshFilter>().mesh = straightMesh;
+                tempGameObject.transform.localScale = new Vector3(radius/straightMesh.bounds.extents.x, radius / straightMesh.bounds.extents.y, difference.magnitude / straightMesh.bounds.size.z);
+            }
+        }
         public void CreatePipe()
         {
-            for(int i = 1; i < points.Count-1; i++)
+            GenerateStraightMeshes();
+            /*for(int i = 1; i < points.Count-1; i++)
             {
                 pipeParts.Add(Instantiate(pipePart, transform.TransformPoint((points[i-1].offset + points[i].offset)/2), Quaternion.Euler(i*90,(i*4)*90, (i - 1) * 90)));
                 pipeParts.Add(Instantiate(cornerPart, transform.TransformPoint(points[i].offset), Quaternion.identity, this.transform));
             }
             pipeParts.Add(Instantiate(pipePart, transform.TransformPoint((points[points.Count-2].offset + GetLastPoint()) / 2), Quaternion.Euler(90, 0, 0), this.transform));
+        */
         }
         public void DeletePipe()
         {

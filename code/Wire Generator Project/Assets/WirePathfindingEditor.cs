@@ -13,6 +13,7 @@ namespace WireGeneratorPathfinding
         SerializedProperty points;
         SerializedProperty cornerPart;
         SerializedProperty pipePart;
+        SerializedProperty straightMesh;
 
         bool showWire;
 
@@ -23,6 +24,7 @@ namespace WireGeneratorPathfinding
             corners = serializedObject.FindProperty("corners");
             cornerPart = serializedObject.FindProperty("cornerPart");
             pipePart = serializedObject.FindProperty("pipePart");
+            straightMesh = serializedObject.FindProperty("straightMesh");
             showWire = true;
         }
 
@@ -82,6 +84,7 @@ namespace WireGeneratorPathfinding
             EditorGUILayout.PropertyField(corners);
             EditorGUILayout.PropertyField(cornerPart);
             EditorGUILayout.PropertyField(pipePart);
+            EditorGUILayout.PropertyField(straightMesh);
 
             if (EditorGUI.EndChangeCheck()) {
                 wire.ShowWire(showWire);
