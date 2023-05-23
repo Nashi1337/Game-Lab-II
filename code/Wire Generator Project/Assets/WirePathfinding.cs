@@ -50,6 +50,7 @@ namespace WireGeneratorPathfinding
 
         //Assumes mesh for straight parts is aligned with z-Axis
         [SerializeField] private Mesh straightMesh;
+        public float sizePerStraightMesh=0.2f;
 
         [SerializeField] private float curveSize = 0.1f;
         [SerializeField] private Mesh curveMesh;
@@ -415,8 +416,8 @@ namespace WireGeneratorPathfinding
         public void GenerateStraightMeshes()
         {
             //Assumes mesh for straight parts is aligned with z-Axis
-            CombineInstance[] combineInstances = new CombineInstance[2*points.Count-3];
-
+            List<CombineInstance> combineInstances = new List<CombineInstance>();
+            
             //Straight parts
             for (int i = 0; i < points.Count-1; i++)
             {
@@ -427,8 +428,10 @@ namespace WireGeneratorPathfinding
                 
                 Matrix4x4 transformMatrix = Matrix4x4.TRS(position,rotation,scale);
 
-                combineInstances[i].mesh=straightMesh;
-                combineInstances[i].transform = transformMatrix;
+                CombineInstance tempCombineInstance= new CombineInstance();
+                tempCombineInstance.mesh = straightMesh;
+                tempCombineInstance.transform = transformMatrix;
+                combineInstances.Add(tempCombineInstance);
             }
 
             //Curve Parts(90°)
@@ -439,16 +442,63 @@ namespace WireGeneratorPathfinding
                 Vector3 differenceNext = -GetPosition(i) + GetPosition(i + 1);
                 Vector3 differencePrevious = -GetPosition(i) + GetPosition(i - 1);
                 Quaternion rotation = Quaternion.LookRotation(differenceNext,differencePrevious);
-                
                 Vector3 scale = Vector3.one*radius;
 
                 Matrix4x4 transformMatrix = Matrix4x4.TRS(position, rotation, scale);
 
-                combineInstances[i + points.Count - 2].mesh = curveMesh;
-                combineInstances[i + points.Count - 2].transform = transformMatrix;
+                CombineInstance tempCombineInstance = new CombineInstance();
+                tempCombineInstance.mesh = curveMesh;
+                tempCombineInstance.transform = transformMatrix;
+                combineInstances.Add(tempCombineInstance);
             }
             Mesh mesh = new Mesh();
-            mesh.CombineMeshes(combineInstances);
+            mesh.CombineMeshes(combineInstances.ToArray());
+            meshFilter.sharedMesh = mesh;
+        }
+
+        public void GenerateStraightMeshesRepeating()
+        {
+            //Assumes mesh for straight parts is aligned with z-Axis
+            List<CombineInstance> combineInstances = new List<CombineInstance>();
+
+            //Straight parts
+            for (int i = 0; i < points.Count - 1; i++)
+            {
+                Vector3 difference = -GetPosition(i) + GetPosition(i + 1);
+                Quaternion rotation = Quaternion.LookRotation(difference);
+                Vector3 scale = new Vector3(radius / straightMesh.bounds.extents.x, radius / straightMesh.bounds.extents.y, sizePerStraightMesh/ straightMesh.bounds.size.z);
+
+                for (int i2 = 0; i2 < Mathf.FloorToInt(difference.magnitude / sizePerStraightMesh); i2++)
+                {
+                    Vector3 position = GetPosition(i) - transform.position + (i2+0.5f)*sizePerStraightMesh*difference.normalized;
+                    Matrix4x4 transformMatrix = Matrix4x4.TRS(position, rotation, scale);
+
+                    CombineInstance tempCombineInstance = new CombineInstance();
+                    tempCombineInstance.mesh = straightMesh;
+                    tempCombineInstance.transform = transformMatrix;
+                    combineInstances.Add(tempCombineInstance);
+                }
+            }
+
+            //Curve Parts(90°)
+            //Assumes Open end point toward +Z and +Y and quadratic bounds
+            for (int i = 1; i < points.Count - 1; i++)
+            {
+                Vector3 position = GetPosition(i) - transform.position;
+                Vector3 differenceNext = -GetPosition(i) + GetPosition(i + 1);
+                Vector3 differencePrevious = -GetPosition(i) + GetPosition(i - 1);
+                Quaternion rotation = Quaternion.LookRotation(differenceNext, differencePrevious);
+                Vector3 scale = Vector3.one * radius;
+
+                Matrix4x4 transformMatrix = Matrix4x4.TRS(position, rotation, scale);
+
+                CombineInstance tempCombineInstance = new CombineInstance();
+                tempCombineInstance.mesh = curveMesh;
+                tempCombineInstance.transform = transformMatrix;
+                combineInstances.Add(tempCombineInstance);
+            }
+            Mesh mesh = new Mesh();
+            mesh.CombineMeshes(combineInstances.ToArray());
             meshFilter.sharedMesh = mesh;
         }
         public void CreatePipe()
