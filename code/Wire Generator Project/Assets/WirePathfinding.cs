@@ -456,7 +456,7 @@ namespace WireGeneratorPathfinding
             meshFilter.sharedMesh = mesh;
         }
 
-        public void GenerateStraightMeshesRepeating()
+        public void GenerateStraightMeshesRepeatingLastStretch()
         {
             //Assumes mesh for straight parts is aligned with z-Axis
             List<CombineInstance> combineInstances = new List<CombineInstance>();
@@ -466,11 +466,18 @@ namespace WireGeneratorPathfinding
             {
                 Vector3 difference = -GetPosition(i) + GetPosition(i + 1);
                 Quaternion rotation = Quaternion.LookRotation(difference);
-                Vector3 scale = new Vector3(radius / straightMesh.bounds.extents.x, radius / straightMesh.bounds.extents.y, sizePerStraightMesh/ straightMesh.bounds.size.z);
+                Vector3 scale;
+
+                bool scaleLast = true;
+
+                scale = new Vector3(radius / straightMesh.bounds.extents.x, radius / straightMesh.bounds.extents.y, sizePerStraightMesh / straightMesh.bounds.size.z);
+
+                Vector3 position = new Vector3();
 
                 for (int i2 = 0; i2 < Mathf.FloorToInt(difference.magnitude / sizePerStraightMesh); i2++)
                 {
-                    Vector3 position = GetPosition(i) - transform.position + (i2+0.5f)*sizePerStraightMesh*difference.normalized;
+                    position = GetPosition(i) - transform.position + (i2 + 0.5f) * scale.z * difference.normalized * straightMesh.bounds.size.z;
+
                     Matrix4x4 transformMatrix = Matrix4x4.TRS(position, rotation, scale);
 
                     CombineInstance tempCombineInstance = new CombineInstance();
@@ -478,11 +485,34 @@ namespace WireGeneratorPathfinding
                     tempCombineInstance.transform = transformMatrix;
                     combineInstances.Add(tempCombineInstance);
                 }
+                if (scaleLast || Mathf.FloorToInt(difference.magnitude / sizePerStraightMesh) == 0)
+                {
+                    if (Mathf.FloorToInt(difference.magnitude / sizePerStraightMesh) == 0)
+                    {
+                        position = GetPosition(i) - transform.position + (0.5f) * difference;
+                        scale = new Vector3(radius / straightMesh.bounds.extents.x, radius / straightMesh.bounds.extents.y, difference.magnitude / straightMesh.bounds.size.z);
+
+                    }
+                    else
+                    {
+                        position += 0.5f*scale.z * difference.normalized * straightMesh.bounds.size.z;
+                        scale = new Vector3(radius / straightMesh.bounds.extents.x, radius / straightMesh.bounds.extents.y, (difference.magnitude - sizePerStraightMesh * (Mathf.FloorToInt(difference.magnitude / sizePerStraightMesh))) / straightMesh.bounds.size.z);
+                        position += 0.5f*scale.z * difference.normalized* straightMesh.bounds.size.z;
+                    }
+
+                    Matrix4x4 transformMatrix = Matrix4x4.TRS(position, rotation, scale);
+
+                    combineInstances.Add(new CombineInstance
+                    {
+                        mesh = straightMesh,
+                        transform = transformMatrix
+                    });
+                }
             }
 
             //Curve Parts(90°)
             //Assumes Open end point toward +Z and +Y and quadratic bounds
-            for (int i = 1; i < points.Count - 1; i++)
+            /*for (int i = 1; i < points.Count - 1; i++)
             {
                 Vector3 position = GetPosition(i) - transform.position;
                 Vector3 differenceNext = -GetPosition(i) + GetPosition(i + 1);
@@ -497,27 +527,76 @@ namespace WireGeneratorPathfinding
                 tempCombineInstance.transform = transformMatrix;
                 combineInstances.Add(tempCombineInstance);
             }
+            */
+            Mesh mesh = new Mesh();
+            mesh.CombineMeshes(combineInstances.ToArray());
+            meshFilter.sharedMesh = mesh;
+        }
+        public void GenerateStraightMeshesRepeating()
+        {
+            //Assumes mesh for straight parts is aligned with z-Axis
+            List<CombineInstance> combineInstances = new List<CombineInstance>();
+
+            //Straight parts
+            for (int i = 0; i < points.Count - 1; i++)
+            {
+                Vector3 difference = -GetPosition(i) + GetPosition(i + 1);
+                Quaternion rotation = Quaternion.LookRotation(difference);
+                Vector3 scale= new Vector3(radius / straightMesh.bounds.extents.x, radius / straightMesh.bounds.extents.y, difference.magnitude / straightMesh.bounds.size.z / Mathf.RoundToInt(difference.magnitude / sizePerStraightMesh));
+
+                Vector3 position=new Vector3();
+
+                for (int i2 = 0; i2 < Mathf.RoundToInt(difference.magnitude / sizePerStraightMesh); i2++)
+                {
+                    position = GetPosition(i) - transform.position + (i2+0.5f)*scale.z*difference.normalized* straightMesh.bounds.size.z;
+
+                    Matrix4x4 transformMatrix = Matrix4x4.TRS(position, rotation, scale);
+
+                    CombineInstance tempCombineInstance = new CombineInstance();
+                    tempCombineInstance.mesh = straightMesh;
+                    tempCombineInstance.transform = transformMatrix;
+                    combineInstances.Add(tempCombineInstance);
+                }
+                if (Mathf.RoundToInt(difference.magnitude / sizePerStraightMesh)==0)
+                {
+                    position = GetPosition(i) - transform.position + (0.5f) * difference;
+                    scale = new Vector3(radius / straightMesh.bounds.extents.x, radius / straightMesh.bounds.extents.y, difference.magnitude / straightMesh.bounds.size.z);
+
+                    Matrix4x4 transformMatrix = Matrix4x4.TRS(position, rotation, scale);
+
+                    combineInstances.Add(new CombineInstance
+                    {
+                        mesh = straightMesh,
+                        transform = transformMatrix
+                    });
+                }
+            }
+
+            //Curve Parts(90°)
+            //Assumes Open end point toward +Z and +Y and quadratic bounds
+            /*for (int i = 1; i < points.Count - 1; i++)
+            {
+                Vector3 position = GetPosition(i) - transform.position;
+                Vector3 differenceNext = -GetPosition(i) + GetPosition(i + 1);
+                Vector3 differencePrevious = -GetPosition(i) + GetPosition(i - 1);
+                Quaternion rotation = Quaternion.LookRotation(differenceNext, differencePrevious);
+                Vector3 scale = Vector3.one * radius;
+
+                Matrix4x4 transformMatrix = Matrix4x4.TRS(position, rotation, scale);
+
+                CombineInstance tempCombineInstance = new CombineInstance();
+                tempCombineInstance.mesh = curveMesh;
+                tempCombineInstance.transform = transformMatrix;
+                combineInstances.Add(tempCombineInstance);
+            }
+            */
             Mesh mesh = new Mesh();
             mesh.CombineMeshes(combineInstances.ToArray());
             meshFilter.sharedMesh = mesh;
         }
         public void CreatePipe()
         {
-            GenerateStraightMeshes();
-            /*for(int i = 1; i < points.Count-1; i++)
-            {
-                pipeParts.Add(Instantiate(pipePart, transform.TransformPoint((points[i-1].offset + points[i].offset)/2), Quaternion.Euler(i*90,(i*4)*90, (i - 1) * 90)));
-                pipeParts.Add(Instantiate(cornerPart, transform.TransformPoint(points[i].offset), Quaternion.identity, this.transform));
-            }
-            pipeParts.Add(Instantiate(pipePart, transform.TransformPoint((points[points.Count-2].offset + GetLastPoint()) / 2), Quaternion.Euler(90, 0, 0), this.transform));
-        */
-        }
-        public void DeletePipe()
-        {
-            foreach (GameObject pipePart in pipeParts)
-            {
-                DestroyImmediate(pipePart);
-            }
+            GenerateStraightMeshesRepeatingLastStretch();
         }
     }
 

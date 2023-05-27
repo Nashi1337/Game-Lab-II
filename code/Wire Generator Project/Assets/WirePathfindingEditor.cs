@@ -69,11 +69,6 @@ namespace WireGeneratorPathfinding
                 Undo.RecordObject(wire, "Create Pipe");
                 wire.CreatePipe();
             }
-            if(GUILayout.Button("Delete Pipe"))
-            {
-                Undo.RecordObject(wire, "Delete Pipe");
-                wire.DeletePipe();
-            }
             if (GUILayout.Button("Reset"))
             {
                 Undo.RecordObject(wire, "Reset");
