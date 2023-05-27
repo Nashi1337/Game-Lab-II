@@ -11,11 +11,11 @@ namespace WireGeneratorPathfinding
         SerializedProperty radius;
         SerializedProperty corners;
         SerializedProperty points;
-        SerializedProperty cornerPart;
-        SerializedProperty pipePart;
         SerializedProperty straightMesh;
         SerializedProperty curveMesh;
         SerializedProperty sizePerStraightMesh;
+        SerializedProperty numberPerStraightSegment;
+        SerializedProperty straightPartMeshGenerationMode;
 
         bool showWire;
 
@@ -24,11 +24,12 @@ namespace WireGeneratorPathfinding
             points = serializedObject.FindProperty("points");
             radius = serializedObject.FindProperty("radius");
             corners = serializedObject.FindProperty("corners");
-            cornerPart = serializedObject.FindProperty("cornerPart");
-            pipePart = serializedObject.FindProperty("pipePart");
             straightMesh = serializedObject.FindProperty("straightMesh");
             curveMesh = serializedObject.FindProperty("curveMesh");
-            sizePerStraightMesh = serializedObject.FindProperty("sizePerStraightMesh"); 
+            sizePerStraightMesh = serializedObject.FindProperty("sizePerStraightMesh");
+            numberPerStraightSegment = serializedObject.FindProperty("numberPerStraightSegment");
+            straightPartMeshGenerationMode = serializedObject.FindProperty("straightPartMeshGenerationMode");
+
             showWire = true;
         }
 
@@ -81,11 +82,12 @@ namespace WireGeneratorPathfinding
             EditorGUILayout.PropertyField(points);
             EditorGUILayout.PropertyField(radius);
             EditorGUILayout.PropertyField(corners);
-            EditorGUILayout.PropertyField(cornerPart);
-            EditorGUILayout.PropertyField(pipePart);
             EditorGUILayout.PropertyField(straightMesh);
             EditorGUILayout.PropertyField(curveMesh);
             EditorGUILayout.PropertyField(sizePerStraightMesh);
+            EditorGUILayout.PropertyField(numberPerStraightSegment);
+            EditorGUILayout.PropertyField(straightPartMeshGenerationMode);
+
 
             if (EditorGUI.EndChangeCheck()) {
                 wire.ShowWire(showWire);
