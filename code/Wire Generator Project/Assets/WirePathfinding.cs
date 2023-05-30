@@ -413,7 +413,11 @@ namespace WireGeneratorPathfinding
             }
         }
 
-        public void GenerateMeshUsingPrefab()
+        public void SetMesh(Mesh mesh)
+        {
+            meshFilter.sharedMesh = mesh;
+        }
+        public Mesh GenerateMeshUsingPrefab()
         {
             //Assumes mesh for straight parts is aligned with z-Axis
             //Curve Parts(90°)
@@ -426,7 +430,7 @@ namespace WireGeneratorPathfinding
 
             Mesh mesh = new Mesh();
             mesh.CombineMeshes(combineInstances,false);
-            meshFilter.sharedMesh = mesh;
+            return mesh;
         }
 
         public Mesh GenerateStraightPartMesh()
