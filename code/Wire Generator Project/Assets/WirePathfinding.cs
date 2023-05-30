@@ -418,14 +418,33 @@ namespace WireGeneratorPathfinding
             //Assumes mesh for straight parts is aligned with z-Axis
             //Curve Parts(90°)
             //Assumes Open end point toward +Z and +Y and quadratic bounds for curves
-            List<CombineInstance> combineInstances = new List<CombineInstance>();
+            CombineInstance[] combineInstances= new CombineInstance[2];
 
-            combineInstances.AddRange(GenerateStraightParts());
-            combineInstances.AddRange(GenerateCurveParts());
+            combineInstances[0] = new CombineInstance() { mesh = GenerateStraightPartMesh(), transform=Matrix4x4.identity };
+            combineInstances[1] = new CombineInstance() { mesh = GenerateCurvePartMesh(), transform=Matrix4x4.identity};
+
 
             Mesh mesh = new Mesh();
-            mesh.CombineMeshes(combineInstances.ToArray());
+            mesh.CombineMeshes(combineInstances,false);
             meshFilter.sharedMesh = mesh;
+        }
+
+        public Mesh GenerateStraightPartMesh()
+        {
+            Mesh mesh = new Mesh();
+            List<CombineInstance> combineInstances = new List<CombineInstance>();
+            combineInstances.AddRange(GenerateStraightParts());
+            mesh.CombineMeshes(combineInstances.ToArray());
+            return mesh;
+        }
+
+        public Mesh GenerateCurvePartMesh()
+        {
+            Mesh mesh = new Mesh();
+            List<CombineInstance> combineInstances = new List<CombineInstance>();
+            combineInstances.AddRange(GenerateCurveParts());
+            mesh.CombineMeshes(combineInstances.ToArray());
+            return mesh;
         }
 
 
@@ -441,8 +460,12 @@ namespace WireGeneratorPathfinding
 
             for (int i = 0; i < points.Count - 1; i++)
             {
-                Vector3 beginning = GetPosition(i) - transform.position;
-                Vector3 end = GetPosition(i + 1) - transform.position;
+                Vector3 difference= GetPosition(i + 1) - GetPosition(i);
+
+                Vector3 beginning = GetPosition(i) - transform.position + curveSize*difference.normalized;
+                Vector3 end = GetPosition(i + 1) - transform.position - curveSize*difference.normalized;
+
+
 
                 int numberOfSectionDivisions;
                 switch(straightPartMeshGenerationMode)
@@ -463,7 +486,7 @@ namespace WireGeneratorPathfinding
                 combineInstances.AddRange(GenerateStraightSection(beginning, end, numberOfSectionDivisions));
                 if (straightPartMeshGenerationMode == StraightPartMeshGenerationMode.RoundAndScaleLast)
                 {
-                    combineInstances.Add(GenerateStraightPart(end, GetPosition(i + 1) - transform.position));
+                    combineInstances.Add(GenerateStraightPart(end, GetPosition(i + 1) - transform.position - curveSize * difference.normalized));
                 }
             }
 
@@ -510,7 +533,7 @@ namespace WireGeneratorPathfinding
 
                 Vector3 position = GetPosition(i) - transform.position;
                 Quaternion rotation = Quaternion.LookRotation(differenceNext, differencePrevious);
-                Vector3 scale = Vector3.one * radius;
+                Vector3 scale = new Vector3(radius / curveMesh.bounds.extents.x, curveSize / curveMesh.bounds.extents.y, curveSize / curveMesh.bounds.extents.z) ;
 
                 Matrix4x4 transformMatrix = Matrix4x4.TRS(position, rotation, scale);
 
@@ -518,7 +541,7 @@ namespace WireGeneratorPathfinding
                 {
                     mesh = curveMesh,
                     transform = transformMatrix
-                });
+                }); ;
             }
 
             return combineInstances;
