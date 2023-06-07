@@ -23,22 +23,30 @@ namespace WireGenerator
             }
         }
 
-        public List<ControlPoint> points = new List<ControlPoint>() { new ControlPoint(new Vector3(0,0,0)), new ControlPoint(new Vector3(0, 0, 1))};
-
-        float lengthFactor = 1f;
-
-        public float radius=0.02f;
+        [SerializeField]
+        float weight = 1f;
+        [SerializeField]
+        float sagOffset = 0f;
 
         Mesh mesh;
-
-        public int corners=6;
-
         MeshFilter meshFilter;
+        public List<ControlPoint> points = new List<ControlPoint>() { new ControlPoint(new Vector3(0,0,0)), new ControlPoint(new Vector3(0, 0, 1))};
+        float lengthFactor = 1f;
+        public float radius=0.02f;
+        public int corners=6;
+        float CalculateWireSag(float gravity, float t)
+        {
+            return gravity * -Mathf.Sin(t * Mathf.PI);
+        }
 
         private void Reset()
         {
             mesh = new Mesh{name = "Wire"};
             meshFilter=GetComponent<MeshFilter>();
+
+            float tension = weight * lengthFactor;
+            float sag = tension + weight + sagOffset;
+            float minimum = CalculateWireSag(sag, 0.5f);
             GenerateMesh();
         }
 
@@ -99,7 +107,7 @@ namespace WireGenerator
                 for (int i = 0; i < corners; i++)
                 {
                     offsetCircle = Quaternion.AngleAxis((360f / corners) * i, tangent);
-                    tempVertices[i + corners * controlPointId] = (offsetCircle * startpointVertice) + (points[controlPointId].useAnchor?GetPosition(controlPointId)-transform.position:points[controlPointId].offset);
+                    tempVertices[i + corners * controlPointId] = (offsetCircle * startpointVertice) + (points[controlPointId].useAnchor ? GetPosition(controlPointId) - transform.position : points[controlPointId].offset);
                     tempNormals[i + corners * controlPointId] = offsetCircle * startpointVertice;
                 }
             }
