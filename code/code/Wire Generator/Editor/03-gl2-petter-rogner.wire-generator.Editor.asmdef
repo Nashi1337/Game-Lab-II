@@ -1,0 +1,20 @@
+{
+  "name": "com.03-gl2-petter-rogner.wire-generator.Editor",
+  "references": [
+	"com.03-gl2-petter-rogner.wire-generator",
+	"com.03-gl2-petter-rogner.wire-generator.Runtime"
+  ],
+  "includePlatforms": [
+    "Editor"
+
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [
+  ],
+  "noEngineReferences": false
+}
