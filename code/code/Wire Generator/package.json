@@ -1,9 +1,0 @@
-{
-  "name": "com.03-gl2-petter-rogner.wire-generator",
-  "version": "0.1.0",
-  "displayName": "Wire Generator",
-  "description": "Package for creating and managing wires. Includes splines and mesh generation",
-  "unity": "2020.1",
-  "dependencies": {
-  }
-}
