@@ -24,6 +24,10 @@ namespace WireGeneratorPathfinding
 
         SerializedProperty cornerPart;
         SerializedProperty pipePart;
+        SerializedProperty startPointGO;
+        SerializedProperty endPointGO;
+        GameObject startPoint;
+        GameObject endPoint;
 
 
         bool showWire;
