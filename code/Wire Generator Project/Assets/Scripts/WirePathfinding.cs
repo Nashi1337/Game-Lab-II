@@ -7,6 +7,7 @@ using UnityEngine;
 
 namespace WireGeneratorPathfinding
 {
+    [ExecuteInEditMode]
     [RequireComponent(typeof(MeshRenderer))]
     [RequireComponent(typeof(MeshFilter))]
     public class WirePathfinding : MonoBehaviour
@@ -14,14 +15,14 @@ namespace WireGeneratorPathfinding
         [Serializable]
         public class ControlPoint
         {
-            public Vector3 offset;
-            public bool useAnchor;
-            public Transform anchorTransform;
+            public Vector3 position;
+            //public bool useAnchor;
+            //public Transform anchorTransform;
 
             public ControlPoint(Vector3 offset) {
-                this.offset = offset;
-                useAnchor = false;
-                anchorTransform = null;
+                this.position = offset;
+                //useAnchor = false;
+                //anchorTransform = null;
             }
         }
 
@@ -54,6 +55,70 @@ namespace WireGeneratorPathfinding
         [SerializeField] private Mesh curveMesh;
 
         [SerializeField]StraightPartMeshGenerationMode straightPartMeshGenerationMode = StraightPartMeshGenerationMode.RoundAndScaleLast;
+        public GameObject cornerPart;
+        public GameObject pipePart;
+        [SerializeField]
+        public GameObject pipeParent;
+        List<GameObject> pipeParts = new List<GameObject>();
+        [SerializeField]
+        public GameObject startPointGO;
+        [SerializeField]
+        public GameObject endPointGO;
+        public Vector3 startPos;
+        public Vector3 endPos;
+        public bool wireGenerated=false;
+        private bool pointMoved = false;
+
+        void Update()
+        {
+            //if(endPointGO != null && startPointGO != null)
+            //{
+            //    if (endPointGO.transform.position != endPos)
+            //    {
+            //        //Reset();
+            //        FindPath();
+            //    }
+            //    if(startPointGO.transform.position != startPos)
+            //    {
+            //        //Reset();
+            //        FindPath();
+            //    }
+            //}
+            if (wireGenerated)
+            {
+                if (startPos != startPointGO.transform.position)
+                {
+                    if (!pointMoved)
+                    {
+                        pointMoved = true;
+                    }
+                }
+                else
+                {
+                    if (pointMoved)
+                    {
+                        pointMoved = false;
+                        FindPath();
+                    }
+                }
+                if (endPos != endPointGO.transform.position)
+                {
+                    if (!pointMoved)
+                    {
+                        pointMoved = true;
+                    }
+                }
+                else
+                {
+                    if (pointMoved)
+                    {
+                        pointMoved = false;
+                        FindPath();
+                    }
+                }
+            }
+            startPos = startPointGO.transform.position;
+        }
 
         float CalculateWireSag(float gravity, float t)
         {
@@ -62,6 +127,8 @@ namespace WireGeneratorPathfinding
 
         public void Reset()
         {
+            wireGenerated = false;
+            pipeParent = this.gameObject;
             points = new List<ControlPoint>() { new ControlPoint(new Vector3(0, 0, 0)), new ControlPoint(new Vector3(1, 0, 0)) };
 
             mesh = new Mesh{name = "Wire"};
@@ -74,8 +141,12 @@ namespace WireGeneratorPathfinding
         }
         public void FindStartEnd()
         {
-            points[0].anchorTransform = GameObject.FindGameObjectWithTag("startPoint").transform;
-            points[1].anchorTransform = GameObject.FindGameObjectWithTag("endPoint").transform;
+            //startPoint = GameObject.FindGameObjectWithTag("startPoint").transform.position;
+            //endPoint = GameObject.FindGameObjectWithTag("endPoint").transform.position;
+            startPointGO = GameObject.FindGameObjectWithTag("startPoint");
+            endPointGO = GameObject.FindGameObjectWithTag("endPoint");
+            //startPos = startPointGO.transform.position;
+            //endPos = endPointGO.transform.position;
         }
 
         public Vector3 NextPoint(float endPoint, Vector3 currentPosition, Vector3 direction, Vector3 rayDirection, int point)
@@ -83,7 +154,7 @@ namespace WireGeneratorPathfinding
             for(float tick = 0.4f; tick <= endPoint;tick += 0.2f)
             {
                 Vector3 offset = tick * direction;
-                currentPosition = points[point].offset +  offset;
+                currentPosition = points[point].position +  offset;
                 if(Physics.Raycast(transform.TransformPoint(currentPosition), direction, 0.2f))
                 {
                     break;
@@ -103,10 +174,45 @@ namespace WireGeneratorPathfinding
             Physics.Raycast(ray, out RaycastHit hitData, Mathf.Infinity);
             return hitData;
         }
+        public Vector3 FindClosestPoint(Vector3 origin)
+        {
+            Vector3 closestPoint = Vector3.positiveInfinity;
+            Vector3[] distances = new Vector3[6];
+            Ray ray = new Ray(origin, Vector3.up);
+            Physics.Raycast(ray, out RaycastHit hitUp, Mathf.Infinity);
+            if(hitUp.transform != null) if (hitUp.transform.tag == "wall") distances[0] = hitUp.point - origin - spacingY;
 
+            ray = new Ray(transform.TransformPoint(origin), Vector3.down);
+            Physics.Raycast(ray, out RaycastHit hitDown, Mathf.Infinity);
+            if (hitDown.transform != null) if (hitDown.transform.tag == "wall") distances[1] = origin - hitDown.point + spacingY;
+
+            ray = new Ray(transform.TransformPoint(origin), Vector3.left);
+            Physics.Raycast(ray, out RaycastHit hitLeft, Mathf.Infinity);
+            if (hitLeft.transform != null) if (hitLeft.transform.tag == "wall") distances[2] = origin - hitLeft.point - spacingX;
+
+            ray = new Ray(transform.TransformPoint(origin), Vector3.right);
+            Physics.Raycast(ray, out RaycastHit hitRight, Mathf.Infinity);
+            if (hitRight.transform != null) if (hitRight.transform.tag == "wall") distances[3] = hitRight.point - origin + spacingX;
+
+            ray = new Ray(transform.TransformPoint(origin), Vector3.back);
+            Physics.Raycast(ray, out RaycastHit hitBack, Mathf.Infinity);
+            if (hitBack.transform != null) if (hitBack.transform.tag == "wall") distances[4] = origin - hitBack.point - spacingZ;
+
+            ray = new Ray(transform.TransformPoint(origin), Vector3.forward);
+            Physics.Raycast(ray, out RaycastHit hitForward, Mathf.Infinity);
+            if (hitForward.transform != null) if (hitForward.transform.tag == "wall") distances[5] = hitForward.point - origin + spacingZ;
+
+            foreach (Vector3 vector in distances)
+            {
+                //Debug.Log(vector + " " + closestPoint);
+                closestPoint = (vector.magnitude < closestPoint.magnitude) ? vector : closestPoint;
+            }
+
+            return closestPoint;
+        }
         Vector3 GetLastPoint()
         {
-            return points[points.Count-1].offset;
+            return points[points.Count-1].position;
         }
 
         int GetLastPointIndex()
@@ -141,7 +247,7 @@ namespace WireGeneratorPathfinding
                 }
                 points.Add(new ControlPoint(GetLastPoint() + new Vector3(2*collider.bounds.extents.x, 0, 0) + 2 * spacingX));
                 points.Add(new ControlPoint(GetLastPoint()));
-                points[points.Count - 1].offset.y = points[points.Count - 4].offset.y;
+                points[points.Count - 1].position.y = points[points.Count - 4].position.y;
             }
             else if (direction == Vector3.forward)
             {
@@ -162,7 +268,7 @@ namespace WireGeneratorPathfinding
                 }
                 points.Add(new ControlPoint(GetLastPoint() + new Vector3(0, 0, 2*collider.bounds.extents.z) + 2 * spacingZ));
                 points.Add(new ControlPoint(GetLastPoint()));
-                points[points.Count - 1].offset.y = points[points.Count - 4].offset.y;
+                points[points.Count - 1].position.y = points[points.Count - 4].position.y;
             }
             else
             {
@@ -186,7 +292,7 @@ namespace WireGeneratorPathfinding
                 points.Add(
                     new ControlPoint(
                         GetLastPoint()));
-                points[points.Count - 1].offset.z = points[points.Count - 4].offset.z;
+                points[points.Count - 1].position.z = points[points.Count - 4].position.z;
             }
 
         }
@@ -194,16 +300,27 @@ namespace WireGeneratorPathfinding
         public void FindPath()
         {
             Collider[] wall;
-
-            if (points[0].anchorTransform != null && points[1].anchorTransform != null)
+            Debug.Log(startPointGO + ", " + endPointGO + ", " + wireGenerated);
+            if (startPointGO != null && endPointGO != null)
             {
-                startPoint = points[0].anchorTransform.position;
-                endPoint = points[1].anchorTransform.position;
-                this.transform.position = startPoint;
-
+                if (wireGenerated)
+                {
+                    wireGenerated = false;
+                    Reset();
+                    FindPath();
+                }
+                startPos = startPointGO.transform.position;
+                endPos = endPointGO.transform.position;
+                //startPoint = points[0].anchorTransform.position;
+                //endPoint = points[1].anchorTransform.position;
+                //this.transform.position = startPoint;
+                points[0].position = startPointGO.transform.position;
                 //Finding the nearest wall from the starting point and setting the 2nd point 0.2f away from that wall
-                wall = Physics.OverlapSphere(points[0].offset, 1f);
-                points[1].offset = wall[0].ClosestPoint(points[0].offset) + spacingZ;
+                points[1].position = FindClosestPoint(points[0].position);
+                wall = Physics.OverlapSphere(points[0].position, 1f);
+                //Debug.Log(points[1].position);
+                //points[1].position = wall[0].ClosestPoint(points[0].position) + spacingZ;
+                //Debug.Log(points[1].position);
 
                 //Checking if there is an obstacle to the right of the 2nd point
                 var obstacle = CastRay(GetLastPoint(), Vector3.right);
@@ -216,7 +333,7 @@ namespace WireGeneratorPathfinding
                 //Create a new point as soon as there is no wall next to the wire
                 points.Add(
                     new ControlPoint(
-                        NextPoint(endPoint.x,points[1].offset,
+                        NextPoint(endPoint.x,points[1].position,
                             Vector3.right,
                             Vector3.forward,
                             GetLastPointIndex())));
@@ -225,7 +342,7 @@ namespace WireGeneratorPathfinding
                 obstacle = CastRay(GetLastPoint(), Vector3.forward);
                 if (obstacle.collider != null && obstacle.collider.gameObject.tag != "wall")
                 {
-                    Debug.Log("Found an obstacle and it's called " + obstacle.collider.name);
+                    //Debug.Log("Found an obstacle and it's called " + obstacle.collider.name);
                     FoundObstacle(obstacle, Vector3.forward);
                 }
                 //Create a new point when the wall next to the wire ends or there's another wall in the way
@@ -281,12 +398,12 @@ namespace WireGeneratorPathfinding
                     points.Add(
                         new ControlPoint(
                             GetLastPoint()));
-                    points[points.Count - 1].offset.y = endPoint.y;
+                    points[points.Count - 1].position.y = endPoint.y;
 
                     points.Add(
                         new ControlPoint(
                             GetLastPoint()));
-                    points[points.Count - 1].offset.z = endPoint.z+0.5f;
+                    points[points.Count - 1].position.z = endPoint.z+0.5f;
                 }
                 else
                 {
@@ -303,6 +420,8 @@ namespace WireGeneratorPathfinding
                                 GetLastPoint().y,
                                 endPoint.z+0.5f)));
                 }
+                wireGenerated = true;
+                GenerateMesh();
             }
             else
             {
@@ -311,11 +430,18 @@ namespace WireGeneratorPathfinding
             }
         }
         public Vector3 GetPosition(int i) {
-            return (points[i].useAnchor && points[i].anchorTransform ? points[i].anchorTransform : transform).position + points[i].offset;
+            return (
+                //points[i].useAnchor && points[i].anchorTransform ?
+                //points[i].anchorTransform :
+                //transform)
+                //.position + points[i].offset;
+                transform.position + points[i].position);
         }
         public void SetPosition(int i, Vector3 position)
         {
-            points[i].offset = position - (points[i].useAnchor && points[i].anchorTransform ? points[i].anchorTransform : transform).position;
+            points[i].position = position -
+                //(points[i].useAnchor && points[i].anchorTransform ? points[i].anchorTransform : transform).position;
+                transform.position;
         }
 
         public void GenerateMesh()
@@ -367,7 +493,11 @@ namespace WireGeneratorPathfinding
                 for (int i = 0; i < corners; i++)
                 {
                     offsetCircle = Quaternion.AngleAxis((360f / corners) * i, tangent);
-                    tempVertices[i + corners * controlPointId] = (offsetCircle * startpointVertice) + (points[controlPointId].useAnchor ? GetPosition(controlPointId) - transform.position : points[controlPointId].offset);
+                    tempVertices[i + corners * controlPointId] = (offsetCircle * startpointVertice) + 
+                        //(points[controlPointId].useAnchor ? GetPosition(controlPointId) - transform.position :
+                        points[controlPointId].position
+                        //)
+                        ;
                     tempNormals[i + corners * controlPointId] = offsetCircle * startpointVertice;
                 }
             }
@@ -396,18 +526,18 @@ namespace WireGeneratorPathfinding
         }
         public void ShowWire(bool showWire)
         {
-            if (points[0].anchorTransform != null && points[1].anchorTransform != null)
+            if (startPoint != null && endPoint != null)
             {
                 if (showWire)
                 {
-                    points[0].anchorTransform.gameObject.GetComponent<MeshRenderer>().enabled = true;
-                    points[1].anchorTransform.gameObject.GetComponent<MeshRenderer>().enabled = true;
+                    startPointGO.gameObject.GetComponent<MeshRenderer>().enabled = true;
+                    endPointGO.gameObject.GetComponent<MeshRenderer>().enabled = true;
                     this.gameObject.GetComponent<MeshRenderer>().enabled = true;
                 }
                 else
                 {
-                    points[0].anchorTransform.gameObject.GetComponent<MeshRenderer>().enabled = false;
-                    points[1].anchorTransform.gameObject.GetComponent<MeshRenderer>().enabled = false;
+                    startPointGO.gameObject.GetComponent<MeshRenderer>().enabled = false;
+                    endPointGO.gameObject.GetComponent<MeshRenderer>().enabled = false;
                     this.gameObject.GetComponent<MeshRenderer>().enabled = false;
                 }
             }
@@ -552,7 +682,214 @@ namespace WireGeneratorPathfinding
         }
         public void CreatePipe()
         {
-            GenerateMeshUsingPrefab();
+            for(int i = 1; i < points.Count-1; i++)
+            {
+                if(pipeParts.Count == 0)
+                {
+                    Debug.Log("Pipe Parts is empty");
+                }
+                Vector3 rotation = CalculateRotation(points[i].position, points[i - 1].position);
+                GameObject part = Instantiate(pipePart, transform.TransformPoint((points[i - 1].position + points[i].position) / 2), Quaternion.Euler(rotation*90), pipeParent.transform);
+                if(part == null)
+                {
+                    Debug.Log("part is empty");
+                }
+                part.transform.localScale = (scaleFactor(points[i].position, points[i - 1].position));
+                pipeParts.Add(part);
+                rotation = CalculateRotation(points[i-1].position, points[i].position, points[i + 1].position);
+                part = Instantiate(cornerPart, transform.TransformPoint(points[i].position), Quaternion.Euler(rotation ), pipeParent.transform);
+                pipeParts.Add(part);
+            }
+            GameObject lastPart = Instantiate(pipePart, transform.TransformPoint((points[points.Count-2].position + GetLastPoint()) / 2), Quaternion.Euler(90, 0, 0), pipeParent.transform);
+            lastPart.transform.localScale = scaleFactor(points[GetLastPointIndex()].position, points[GetLastPointIndex() - 1].position);
+            pipeParts.Add(lastPart);
+        }
+        public void DeletePipe()
+        {
+            foreach (GameObject pipePart in pipeParts)
+            {
+                DestroyImmediate(pipePart);
+            }
+        }
+
+        public Vector3 CalculateRotation(Vector3 point1, Vector3 point2)
+        {
+            Vector3 distance = point1 - point2;
+            Vector3 rotation = new Vector3(0,0,0);
+            if(distance.x > 0)
+            {
+                rotation = new Vector3(0, 0, 1);
+            }
+            else if(distance.y > 0)
+            {
+                rotation = new Vector3(0, 1, 0);
+            }
+            else if(distance.z > 0)
+            {
+                rotation = new Vector3 (1, 0, 0);
+            }
+            else if(distance.x < 0)
+            {
+                rotation = new Vector3(0, 0, 1);
+            }
+            else if(distance.y < 0)
+            {
+                rotation = new Vector3(0, 0, 0);
+            }
+            else if(distance.z < 0)
+            {
+                rotation = new Vector3(1, 0, 0);
+            }
+
+            return rotation;
+        }
+        public Vector3 CalculateRotation(Vector3 point1, Vector3 point2, Vector3 point3)
+        {
+            Vector3 distance1 = point2 - point1;
+            Vector3 distance2 = point3 - point2;
+            Vector3 rotation = new Vector3(0, 0, 0);
+            if (distance1.x > 0)
+            {
+                if(distance2.y > 0)
+                {
+                    rotation = new Vector3(0, 0, 180);
+                }
+                else if(distance2.y < 0)
+                {
+                    rotation = new Vector3(0, 0, 270);
+                }
+                else if(distance2.z > 0)
+                {
+                    rotation = new Vector3(90, 0, 180);
+                }
+                else if(distance2.z < 0)
+                {
+                    rotation = new Vector3(-90, 0, 180);
+                }
+            }
+            else if (distance1.y > 0)
+            {
+                if (distance2.x > 0)
+                {
+                    rotation = new Vector3(0, 0, 0);
+                }
+                else if (distance2.x < 0)
+                {
+                    rotation = new Vector3(0, 180, 0);
+                }
+                else if (distance2.z > 0)
+                {
+                    rotation = new Vector3(0, 270, 0);
+                }
+                else if (distance2.z < 0)
+                {
+                    rotation = new Vector3(0, 90, 0);
+                }
+            }
+            else if (distance1.y < 0)
+            {
+                if (distance2.x > 0)
+                {
+                    rotation = new Vector3(0, 0, 90);
+                }
+                else if (distance2.x < 0)
+                {
+                    rotation = new Vector3(0, 180, 0);
+                }
+                else if (distance2.z > 0)
+                {
+                    rotation = new Vector3(0, 270, 0);
+                }
+                else if (distance2.z < 0)
+                {
+                    rotation = new Vector3(0, 90, 90);
+                }
+            }
+            else if (distance1.z > 0)
+            {
+                if (distance2.x > 0)
+                {
+                    rotation = new Vector3(90, 0, 0);
+                }
+                else if (distance2.x < 0)
+                {
+                    rotation = new Vector3(90, 90, 0);
+                }
+                else if (distance2.y > 0)
+                {
+                    rotation = new Vector3(180, 90, 0);
+                }
+                else if (distance2.y < 0)
+                {
+                    rotation = new Vector3(0, 90, 0);
+                }
+            }
+            else if (distance1.z < 0)
+            {
+                if (distance2.x > 0)
+                {
+                    rotation = new Vector3(90, 270, 0);
+                }
+                else if (distance2.x < 0)
+                {
+                    rotation = new Vector3(270, 270, 0);
+                }
+                else if (distance2.y > 0)
+                {
+                    rotation = new Vector3(180, 270, 0);
+                }
+                else if (distance2.y < 0)
+                {
+                    rotation = new Vector3(0, 270, 0);
+                }
+            }
+            return rotation;
+        }
+
+        public Vector3 scaleFactor(Vector3 point1, Vector3 point2)
+        {
+            Vector3 distance = point1 - point2;
+            if (distance.x > 0)
+            {
+                return new Vector3(0.2f, distance.x / 2, 0.2f);
+            }
+            else if (distance.y > 0)
+            {
+                return new Vector3(0.2f, distance.y / 2, 0.2f);
+            }
+            else if (distance.z > 0)
+            {
+                return new Vector3(0.2f, distance.z / 2, 0.2f);
+            }
+            else if (distance.x < 0)
+            {
+                return new Vector3(0.2f, Mathf.Abs(distance.x) / 2, 0.2f);
+            }
+            else if (distance.y < 0)
+            {
+                return new Vector3(0.2f, Mathf.Abs(distance.y) / 2, 0.2f);
+            }
+            else if (distance.z < 0)
+            {
+                return new Vector3(0.2f, Mathf.Abs(distance.z) / 2, 0.2f);
+            }
+            else return new Vector3(0.2f, 0.2f, 0.2f);
+        }
+        public void UpdatePoints()
+        {
+            if (startPoint != null && endPoint != null)
+            {
+                if (startPointGO.transform.hasChanged)
+                {
+                    Debug.Log("startpoint has changed");
+                }
+                else if (endPointGO.transform.hasChanged)
+                {
+                    Debug.Log("endpoint has changed");
+                }
+            FindPath();
+            }
         }
     }
+
 }
