@@ -13,12 +13,18 @@ namespace WireGeneratorPathfinding
         SerializedProperty radius;
         SerializedProperty corners;
         SerializedProperty points;
+
+
         SerializedProperty straightMesh;
         SerializedProperty curveMesh;
         SerializedProperty sizePerStraightMesh;
         SerializedProperty numberPerStraightSegment;
         SerializedProperty straightPartMeshGenerationMode;
         SerializedProperty curveSize;
+
+        SerializedProperty cornerPart;
+        SerializedProperty pipePart;
+
 
         bool showWire;
 
@@ -38,12 +44,20 @@ namespace WireGeneratorPathfinding
             points = serializedObject.FindProperty("points");
             radius = serializedObject.FindProperty("radius");
             corners = serializedObject.FindProperty("corners");
+
             straightMesh = serializedObject.FindProperty("straightMesh");
             curveMesh = serializedObject.FindProperty("curveMesh");
             sizePerStraightMesh = serializedObject.FindProperty("sizePerStraightMesh");
             numberPerStraightSegment = serializedObject.FindProperty("numberPerStraightSegment");
             straightPartMeshGenerationMode = serializedObject.FindProperty("straightPartMeshGenerationMode");
             curveSize = serializedObject.FindProperty("curveSize");
+
+            startPointGO = serializedObject.FindProperty("startPointGO");
+            endPointGO = serializedObject.FindProperty("endPointGO");
+            startPoint = startPointGO.serializedObject.targetObject as GameObject;
+            endPoint = endPointGO.serializedObject.targetObject as GameObject;
+
+
 
             showWire = true;
 
@@ -67,6 +81,15 @@ namespace WireGeneratorPathfinding
                 }
                 Handles.SphereHandleCap(0, wire.GetPosition(i), Quaternion.identity, 0.1f, EventType.Repaint);
             }
+
+            EditorGUI.BeginChangeCheck();
+            EditorGUILayout.PropertyField(startPointGO);
+            EditorGUILayout.PropertyField(endPointGO);
+            if (EditorGUI.EndChangeCheck())
+            {
+                Debug.Log("something changed");
+            }
+
         }
         public override void OnInspectorGUI()
         {
@@ -84,12 +107,11 @@ namespace WireGeneratorPathfinding
 
             if(GUILayout.Button("Find Path Along Wall"))
             {
-                Debug.Log("Find Path");
                 Undo.RecordObject(wire, "Find Path Along Wall");
                 wire.FindPath();
             }
 
-            if (GUILayout.Button("Generate Mesh"))
+            if (GUILayout.Button("Generate Mesh (Trucy)"))
             {
                 Undo.IncrementCurrentGroup();
                 Mesh sharedMesh = wire.GetComponent<MeshFilter>().sharedMesh;
@@ -109,6 +131,19 @@ namespace WireGeneratorPathfinding
                 wire.SetMesh(newMesh);  
                 Undo.SetCurrentGroupName("Generate Mesh");
             }
+
+            if (GUILayout.Button("Create Pipe(Nashi)"))
+            {
+                Undo.RecordObject(wire, "Create Pipe");
+                wire.CreatePipe();
+            }
+            if (GUILayout.Button("Delete Pipe(Nashi)"))
+            {
+                Undo.RecordObject(wire, "Delete Pipe");
+                wire.DeletePipe();
+            }
+
+
             if (GUILayout.Button("Reset"))
             {
                 Undo.RecordObject(wire, "Reset");
@@ -133,6 +168,34 @@ namespace WireGeneratorPathfinding
                 wire.ShowWire(showWire);
                 serializedObject.ApplyModifiedProperties();
                 //wire.GenerateMesh();
+
+                //GameObject startPoint = startPointGO.serializedObject.targetObject as GameObject;
+                var go = startPointGO.serializedObject.targetObject as GameObject;
+                //Debug.Log(go);
+                //Debug.Log(startPoint);
+                //Debug.Log(startPointGO.serializedObject.GetType());
+                //wire.startPointGO.transform.position;
+                if (wire.wireGenerated)
+                {
+                    if (wire.startPointGO.transform.position != wire.startPos)
+                    {
+                        Debug.Log("start point moved (I'm OnInspectorGUI");
+                    }
+                }
+                if (startPointGO.serializedObject.targetObject as GameObject)
+                {
+                    Debug.Log("hallo");
+                    //wire.FindPath();
+                }
+                //if (endPointGO.transform.hasChanged)
+                //{
+                //    Debug.Log("hallllo");
+                //}
+                //wire.UpdatePoints();
+                
+                
+                //wire.GenerateMesh();
+
             }
         }
     }
