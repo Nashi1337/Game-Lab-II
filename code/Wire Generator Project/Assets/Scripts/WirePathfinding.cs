@@ -1,8 +1,5 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Drawing;
-using Unity.VisualScripting;
 using UnityEngine;
 
 namespace WireGeneratorPathfinding
@@ -131,12 +128,8 @@ namespace WireGeneratorPathfinding
         }
         public void FindStartEnd()
         {
-            //startPoint = GameObject.FindGameObjectWithTag("startPoint").transform.position;
-            //endPoint = GameObject.FindGameObjectWithTag("endPoint").transform.position;
             startPointGO = GameObject.FindGameObjectWithTag("startPoint");
             endPointGO = GameObject.FindGameObjectWithTag("endPoint");
-            //startPos = startPointGO.transform.position;
-            //endPos = endPointGO.transform.position;
         }
 
         public Vector3 NextPoint(float endPoint, Vector3 currentPosition, Vector3 direction, Vector3 rayDirection, int point)
@@ -166,36 +159,41 @@ namespace WireGeneratorPathfinding
         }
         public Vector3 FindClosestPoint(Vector3 origin)
         {
+            float spacing = 0.2f;
+
+            Debug.Log(origin);
             Vector3 closestPoint = Vector3.positiveInfinity;
-            Vector3[] distances = new Vector3[6];
-            Ray ray = new Ray(origin, Vector3.up);
-            Physics.Raycast(ray, out RaycastHit hitUp, Mathf.Infinity);
-            if(hitUp.transform != null) if (hitUp.transform.tag == "wall") distances[0] = hitUp.point - origin - spacingY;
+            float bestDistance = Mathf.Infinity;
 
-            ray = new Ray(transform.TransformPoint(origin), Vector3.down);
-            Physics.Raycast(ray, out RaycastHit hitDown, Mathf.Infinity);
-            if (hitDown.transform != null) if (hitDown.transform.tag == "wall") distances[1] = origin - hitDown.point + spacingY;
+            Vector3[] directons = {
+                Vector3.up,
+                Vector3.down,
+                Vector3.left,
+                Vector3.right,
+                Vector3.back,
+                Vector3.forward
+            };
 
-            ray = new Ray(transform.TransformPoint(origin), Vector3.left);
-            Physics.Raycast(ray, out RaycastHit hitLeft, Mathf.Infinity);
-            if (hitLeft.transform != null) if (hitLeft.transform.tag == "wall") distances[2] = origin - hitLeft.point - spacingX;
-
-            ray = new Ray(transform.TransformPoint(origin), Vector3.right);
-            Physics.Raycast(ray, out RaycastHit hitRight, Mathf.Infinity);
-            if (hitRight.transform != null) if (hitRight.transform.tag == "wall") distances[3] = hitRight.point - origin + spacingX;
-
-            ray = new Ray(transform.TransformPoint(origin), Vector3.back);
-            Physics.Raycast(ray, out RaycastHit hitBack, Mathf.Infinity);
-            if (hitBack.transform != null) if (hitBack.transform.tag == "wall") distances[4] = origin - hitBack.point - spacingZ;
-
-            ray = new Ray(transform.TransformPoint(origin), Vector3.forward);
-            Physics.Raycast(ray, out RaycastHit hitForward, Mathf.Infinity);
-            if (hitForward.transform != null) if (hitForward.transform.tag == "wall") distances[5] = hitForward.point - origin + spacingZ;
-
-            foreach (Vector3 vector in distances)
+            foreach (Vector3 dir in directons)
             {
-                //Debug.Log(vector + " " + closestPoint);
-                closestPoint = (vector.magnitude < closestPoint.magnitude) ? vector : closestPoint;
+                Ray ray = new Ray(origin, dir);
+                Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity);
+                if ((hit.transform == null) || (!hit.transform.CompareTag("wall")))
+                {
+                    continue;
+                }
+                float distance = hit.distance - spacing;
+                if (bestDistance <= distance)
+                {
+                    continue;
+                }
+                bestDistance = distance;
+                closestPoint = origin + dir * distance;
+            }
+
+            if (bestDistance == Mathf.Infinity)
+            {
+                Debug.Log("no");
             }
 
             return closestPoint;
@@ -289,8 +287,6 @@ namespace WireGeneratorPathfinding
 
         public void FindPath()
         {
-            Collider[] wall;
-            Debug.Log(startPointGO + ", " + endPointGO + ", " + wireGenerated);
             if (startPointGO != null && endPointGO != null)
             {
                 if (wireGenerated)
@@ -301,13 +297,15 @@ namespace WireGeneratorPathfinding
                 }
                 startPos = startPointGO.transform.position;
                 endPos = endPointGO.transform.position;
-                //startPoint = points[0].anchorTransform.position;
-                //endPoint = points[1].anchorTransform.position;
-                //this.transform.position = startPoint;
                 points[0].position = startPointGO.transform.position;
+
                 //Finding the nearest wall from the starting point and setting the 2nd point 0.2f away from that wall
-                points[1].position = FindClosestPoint(points[0].position);
-                wall = Physics.OverlapSphere(points[0].position, 1f);
+                Vector3 closestPoint = FindClosestPoint(transform.TransformPoint(points[0].position));
+                points[1].position = FindClosestPoint(transform.TransformPoint(points[0].position));
+                Debug.Log(points[0].position);
+                Debug.Log(FindClosestPoint(points[0].position));
+                Debug.Log(closestPoint);
+                Debug.Log(transform.TransformPoint(points[0].position));
                 //Debug.Log(points[1].position);
                 //points[1].position = wall[0].ClosestPoint(points[0].position) + spacingZ;
                 //Debug.Log(points[1].position);
