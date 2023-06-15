@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace WireGeneratorPathfinding
 {
@@ -46,10 +47,17 @@ namespace WireGeneratorPathfinding
         public GameObject endPointGO;
         public Vector3 startPos;
         public Vector3 endPos;
+        GameObject generateStartPoint;
+        GameObject generateEndPoint;
         public bool wireGenerated=false;
         private bool pointMoved = false;
         bool noWalls;
 
+        private void Awake()
+        {
+            Reset();
+            FindShortestPath();
+        }
         void Update()
         {
             if (wireGenerated)
@@ -104,6 +112,11 @@ namespace WireGeneratorPathfinding
             if (startPointGO == null || endPointGO == null)
             {
                 FindStartEnd();
+            }
+            if (generateEndPoint == null || generateStartPoint == null)
+            {
+                generateEndPoint = GameObject.Find("GenerateEndPoint");
+                generateStartPoint = GameObject.Find("GenerateStartPoint");
             }
             startPos = startPointGO.transform.position;
             endPos = endPointGO.transform.position;
