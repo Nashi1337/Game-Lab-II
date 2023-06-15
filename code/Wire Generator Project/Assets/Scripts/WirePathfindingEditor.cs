@@ -10,13 +10,12 @@ namespace WireGeneratorPathfinding
     {
         SerializedProperty radius;
         SerializedProperty corners;
+        SerializedProperty steps;
         SerializedProperty points;
         SerializedProperty cornerPart;
         SerializedProperty pipePart;
         SerializedProperty startPointGO;
         SerializedProperty endPointGO;
-        GameObject startPoint;
-        GameObject endPoint;
 
         bool showWire;
 
@@ -25,13 +24,11 @@ namespace WireGeneratorPathfinding
             points = serializedObject.FindProperty("points");
             radius = serializedObject.FindProperty("radius");
             corners = serializedObject.FindProperty("corners");
+            steps = serializedObject.FindProperty("steps");
             cornerPart = serializedObject.FindProperty("cornerPart");
             pipePart = serializedObject.FindProperty("pipePart");
             startPointGO = serializedObject.FindProperty("startPointGO");
             endPointGO = serializedObject.FindProperty("endPointGO");
-            startPoint = startPointGO.serializedObject.targetObject as GameObject;
-            endPoint = endPointGO.serializedObject.targetObject as GameObject;
-            //startPoint = (GameObject)startPointGO;
             showWire = true;
         }
 
@@ -73,7 +70,11 @@ namespace WireGeneratorPathfinding
                 Undo.RecordObject(wire, "Find Path Along Wall");
                 wire.FindPath();
             }
-
+            if(GUILayout.Button("Find Shortest Path"))
+            {
+                Undo.RecordObject(wire, "Find Shortest Path");
+                wire.FindShortestPath();
+            }
             if(GUILayout.Button("Create Pipe"))
             {
                 Undo.RecordObject(wire, "Create Pipe");
@@ -96,6 +97,7 @@ namespace WireGeneratorPathfinding
             EditorGUILayout.PropertyField(points);
             EditorGUILayout.PropertyField(radius);
             EditorGUILayout.PropertyField(corners);
+            EditorGUILayout.PropertyField(steps);
             EditorGUILayout.PropertyField(cornerPart);
             EditorGUILayout.PropertyField(pipePart);
             EditorGUILayout.PropertyField(startPointGO);
@@ -104,29 +106,6 @@ namespace WireGeneratorPathfinding
             if (EditorGUI.EndChangeCheck()) {
                 wire.ShowWire(showWire);
                 serializedObject.ApplyModifiedProperties();
-                //GameObject startPoint = startPointGO.serializedObject.targetObject as GameObject;
-                var go = startPointGO.serializedObject.targetObject as GameObject;
-                //Debug.Log(go);
-                //Debug.Log(startPoint);
-                //Debug.Log(startPointGO.serializedObject.GetType());
-                //wire.startPointGO.transform.position;
-                if (wire.wireGenerated)
-                {
-                    if(wire.startPointGO.transform.position != wire.startPos)
-                    {
-                        Debug.Log("start point moved (I'm OnInspectorGUI");
-                    }
-                }
-                if (startPointGO.serializedObject.targetObject as GameObject)
-                {
-                    Debug.Log("hallo");
-                    //wire.FindPath();
-                }
-                //if (endPointGO.transform.hasChanged)
-                //{
-                //    Debug.Log("hallllo");
-                //}
-                //wire.UpdatePoints();
                 wire.GenerateMesh();
             }
         }

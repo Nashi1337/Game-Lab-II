@@ -13,19 +13,10 @@ namespace WireGeneratorPathfinding
         public class ControlPoint
         {
             public Vector3 position;
-            //public bool useAnchor;
-            //public Transform anchorTransform;
-
             public ControlPoint(Vector3 offset) {
                 this.position = offset;
-                //useAnchor = false;
-                //anchorTransform = null;
             }
         }
-
-        public Vector3 startPoint;
-        public Vector3 endPoint;
-
 
         Vector3 spacingZ = new Vector3(0, 0, 0.19f);
         Vector3 spacingY = new Vector3(0, 0.19f, 0);
@@ -42,6 +33,8 @@ namespace WireGeneratorPathfinding
         float lengthFactor = 1f;
         public float radius=2f;
         public int corners=6;
+        [Range(0, 5)]
+        public int steps;
         public GameObject cornerPart;
         public GameObject pipePart;
         [SerializeField]
@@ -55,11 +48,18 @@ namespace WireGeneratorPathfinding
         public Vector3 endPos;
         public bool wireGenerated=false;
         private bool pointMoved = false;
+        bool noWalls;
 
         void Update()
         {
             if (wireGenerated)
             {
+                if (steps != points.Count - 2)
+                {
+                    Debug.Log("Step Count should be " + steps + " but is " + (points.Count - 2));
+                    Reset();
+                    FindShortestPath();
+                }
                 if (startPos != startPointGO.transform.position)
                 {
                     if (!pointMoved)
@@ -72,7 +72,7 @@ namespace WireGeneratorPathfinding
                     if (pointMoved)
                     {
                         pointMoved = false;
-                        FindPath();
+                        FindShortestPath();
                     }
                 }
                 if (endPos != endPointGO.transform.position)
@@ -101,6 +101,12 @@ namespace WireGeneratorPathfinding
 
         public void Reset()
         {
+            if (startPointGO == null || endPointGO == null)
+            {
+                FindStartEnd();
+            }
+            startPos = startPointGO.transform.position;
+            endPos = endPointGO.transform.position;
             wireGenerated = false;
             pipeParent = this.gameObject;
             points = new List<ControlPoint>() { new ControlPoint(new Vector3(0, 0, 0)), new ControlPoint(new Vector3(1, 0, 0)) };
@@ -209,13 +215,15 @@ namespace WireGeneratorPathfinding
 
             if (bestDistance == Mathf.Infinity)
             {
-                Debug.Log("no");
+                Debug.Log("I think there is no wall anywhere :(");
+                noWalls = true;
+                return endPos;
             }
-
-            return new Vector3(
-                Mathf.Round(closestPoint.x),
-                Mathf.Round(closestPoint.y),
-                Mathf.Round(closestPoint.z));
+            else
+                return new Vector3(
+                    Mathf.Round(closestPoint.x),
+                    Mathf.Round(closestPoint.y),
+                    Mathf.Round(closestPoint.z));
         }
         Vector3 GetLastPoint()
         {
@@ -304,6 +312,101 @@ namespace WireGeneratorPathfinding
 
         }
 
+        public void FindShortestPath()
+        {
+            if (startPointGO != null && endPointGO != null)
+            {
+                if (wireGenerated)
+                {
+                    wireGenerated = false;
+                    Reset();
+                    FindShortestPath();
+                }
+
+
+                //POINT 0
+                points[0].position = startPos;
+
+                //POINT 1
+                if(steps == 0)
+                    points[1].position = endPos;
+                else
+                    points[1].position = new Vector3(
+                        endPos.x,
+                        points[0].position.y,
+                        points[0].position.z);
+
+                if (steps == 1)
+                {
+                    //POINT 1
+                    points[1].position = new Vector3(
+                        endPos.x,
+                        startPos.y,
+                        endPos.z);
+                    //POINT 2
+                    if (startPos.y != endPos.y)
+                    {
+                        points.Add(new ControlPoint(new Vector3(
+                            endPos.x,
+                            endPos.y,
+                            endPos.z)));
+                    }
+                }
+                else if(steps >= 2)
+                {
+                    //POINT 2
+                    points.Add(new ControlPoint(new Vector3(
+                        endPos.x,
+                        endPos.y,
+                        startPos.z)));
+                    //POINT 3
+                    if (startPos.z != endPos.z)
+                    {
+                        points.Add(new ControlPoint(new Vector3(
+                            endPos.x,
+                            endPos.y,
+                            endPos.z)));
+                    }
+                }
+                if(steps >= 3)
+                {
+                    //POINT 4
+                    points.Add(new ControlPoint(GetLastPoint()));
+                    points[3].position = points[2].position;
+                    points[2].position = points[1].position;
+                    points[1].position = new Vector3(
+                        points[0].position.x + Vector3.Distance(points[0].position,points[1].position)/2,
+                        points[1].position.y,
+                        points[1].position.z);
+                }
+                if(steps >= 4)
+                {
+                    //POINT 5
+                    points.Add(new ControlPoint(GetLastPoint()));
+                    points[4].position = points[3].position;
+                    points[3].position = new Vector3(
+                        points[3].position.x,
+                        points[2].position.y + Vector3.Distance(points[2].position, points[3].position) / 2,
+                        points[3].position.z);
+                }
+                if(steps == 5)
+                {
+                    //POINT 6
+                    points.Add(new ControlPoint(GetLastPoint()));
+                    points[5].position = new Vector3(
+                        points[4].position.x,
+                        points[4].position.y,
+                        points[4].position.z + Vector3.Distance(points[6].position, points[4].position) / 2);
+                }
+                wireGenerated = true;
+                GenerateMesh();
+            }
+            else
+            {
+                FindStartEnd();
+                FindPath();
+            }
+        }
         public void FindPath()
         {
             if (startPointGO != null && endPointGO != null)
@@ -417,12 +520,12 @@ namespace WireGeneratorPathfinding
                     points.Add(
                         new ControlPoint(
                             GetLastPoint()));
-                    points[points.Count - 1].position.y = endPoint.y;
+                    points[points.Count - 1].position.y = endPos.y;
 
                     points.Add(
                         new ControlPoint(
                             GetLastPoint()));
-                    points[points.Count - 1].position.z = endPoint.z+0.5f;
+                    points[points.Count - 1].position.z = endPos.z+0.5f;
                 }
                 else
                 {
@@ -435,6 +538,7 @@ namespace WireGeneratorPathfinding
                                     endPos.y,
                                     GetLastPoint().z)));
                     }
+                    if(!noWalls)
                         points.Add(
                             new ControlPoint(
                                 new Vector3(
@@ -541,7 +645,7 @@ namespace WireGeneratorPathfinding
         }
         public void ShowWire(bool showWire)
         {
-            if (startPoint != null && endPoint != null)
+            if (startPointGO != null && endPointGO != null)
             {
                 if (showWire)
                 {
@@ -752,21 +856,6 @@ namespace WireGeneratorPathfinding
                 return new Vector3(0.2f, Mathf.Abs(distance.z) / 2, 0.2f);
             }
             else return new Vector3(0.2f, 0.2f, 0.2f);
-        }
-        public void UpdatePoints()
-        {
-            if (startPoint != null && endPoint != null)
-            {
-                if (startPointGO.transform.hasChanged)
-                {
-                    Debug.Log("startpoint has changed");
-                }
-                else if (endPointGO.transform.hasChanged)
-                {
-                    Debug.Log("endpoint has changed");
-                }
-            FindPath();
-            }
         }
     }
 
