@@ -625,11 +625,7 @@ namespace WireGeneratorPathfinding
                 for (int i = 0; i < corners; i++)
                 {
                     offsetCircle = Quaternion.AngleAxis((360f / corners) * i, tangent);
-                    tempVertices[i + corners * controlPointId] = (offsetCircle * startpointVertice) + 
-                        //(points[controlPointId].useAnchor ? GetPosition(controlPointId) - transform.position :
-                        points[controlPointId].position
-                        //)
-                        ;
+                    tempVertices[i + corners * controlPointId] = (offsetCircle * startpointVertice) + points[controlPointId].position;
                     tempNormals[i + corners * controlPointId] = offsetCircle * startpointVertice;
                 }
             }
@@ -679,16 +675,8 @@ namespace WireGeneratorPathfinding
         {
             for(int i = 1; i < points.Count-1; i++)
             {
-                if(pipeParts.Count == 0)
-                {
-                    Debug.Log("Pipe Parts is empty");
-                }
                 Vector3 rotation = CalculateRotation(points[i].position, points[i - 1].position);
                 GameObject part = Instantiate(pipePart, transform.TransformPoint((points[i - 1].position + points[i].position) / 2), Quaternion.Euler(rotation*90), pipeParent.transform);
-                if(part == null)
-                {
-                    Debug.Log("part is empty");
-                }
                 part.transform.localScale = (scaleFactor(points[i].position, points[i - 1].position));
                 pipeParts.Add(part);
                 rotation = CalculateRotation(points[i-1].position, points[i].position, points[i + 1].position);

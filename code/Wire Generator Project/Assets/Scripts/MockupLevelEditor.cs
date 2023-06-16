@@ -20,6 +20,8 @@ public class MockupLevelEditor : MonoBehaviour
     GameObject endPoint;
     GameObject wire;
 
+    bool showWire;
+
     private void Update()
     {
         if(startPoint!=null && endPoint != null)
@@ -54,6 +56,20 @@ public class MockupLevelEditor : MonoBehaviour
             wire = Instantiate(wirePrefab);
             wire.transform.position = Vector3.zero;
             wire.name = "WireGenerated";
+            wire.gameObject.GetComponent<WireGeneratorPathfinding.WirePathfinding>().steps = 2;
         }
+    }
+
+    public void GenerateEverything()
+    {
+        GenerateStartPoint();
+        GenerateEndPoint();
+        GenerateWire();
+    }
+
+    public void HideWire()
+    {
+        wire.gameObject.GetComponent<WireGeneratorPathfinding.WirePathfinding>().ShowWire(showWire);
+        showWire = !showWire;
     }
 }
