@@ -16,8 +16,10 @@ public class MockupLevelEditor : MonoBehaviour
     public Text EndY;
     public Text EndZ;
 
-    GameObject startPoint;
-    GameObject endPoint;
+    public GameObject startPoint;
+    public GameObject endPoint;
+
+    public Slider Corners;
     GameObject wire;
 
     bool showWire;
@@ -36,17 +38,15 @@ public class MockupLevelEditor : MonoBehaviour
     }
     public void GenerateStartPoint()
     {
-        startPoint = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        startPoint.transform.position = new Vector3(0, 0, 0);
-        startPoint.name = "startPointGenerated";
-        startPoint.tag = "startPoint";
+        GameObject startPointGenerated = Instantiate(startPoint);
+        startPointGenerated.transform.position = new Vector3(0, 0, 0);
+        startPointGenerated.name = "startPointGenerated";
     }
     public void GenerateEndPoint()
     {
-        endPoint = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        endPoint.transform.position = new Vector3(2, 2, 2);
-        endPoint.name = "endPointGenerated";
-        endPoint.tag = "endPoint";
+        GameObject endPointGenerated = Instantiate(endPoint);
+        endPointGenerated.transform.position = new Vector3(2, 2, 2);
+        endPointGenerated.name = "endPointGenerated";
     }
 
     public void GenerateWire()
@@ -71,5 +71,13 @@ public class MockupLevelEditor : MonoBehaviour
     {
         wire.gameObject.GetComponent<WireGeneratorPathfinding.WirePathfinding>().ShowWire(showWire);
         showWire = !showWire;
+    }
+
+    public void SetCorners()
+    {
+        wire.gameObject.GetComponent<WireGeneratorPathfinding.WirePathfinding>().corners = (int)Corners.value;
+        wire.gameObject.GetComponent<WireGeneratorPathfinding.WirePathfinding>().Reset();
+        wire.gameObject.GetComponent<WireGeneratorPathfinding.WirePathfinding>().FindShortestPath();
+        //wire.gameObject.GetComponent<WireGeneratorPathfinding.WirePathfinding>().GenerateMesh();
     }
 }
