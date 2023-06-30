@@ -545,6 +545,7 @@ namespace WireGeneratorPathfinding
 
         public void SetMesh(Mesh mesh)
         {
+            meshFilter = GetComponent<MeshFilter>();
             meshFilter.sharedMesh = mesh;
         }
         public Mesh GenerateMeshUsingPrefab()
@@ -555,10 +556,12 @@ namespace WireGeneratorPathfinding
             CombineInstance[] combineInstances= new CombineInstance[2];
 
             combineInstances[0] = new CombineInstance() { mesh = GenerateStraightPartMesh(), transform=Matrix4x4.identity };
+            
             combineInstances[1] = new CombineInstance() { mesh = GenerateCurvePartMesh(), transform=Matrix4x4.identity};
-
+            //combineInstances[1] = new CombineInstance() { mesh = WireGenerator.WireMesh.DeformMeshUsingBezierCurve(Instantiate<Mesh>(straightMesh)) }
 
             Mesh mesh = new Mesh();
+            mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
             mesh.CombineMeshes(combineInstances,false);
             return mesh;
         }
@@ -568,6 +571,7 @@ namespace WireGeneratorPathfinding
             Mesh mesh = new Mesh();
             List<CombineInstance> combineInstances = new List<CombineInstance>();
             combineInstances.AddRange(GenerateStraightParts());
+            mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
             mesh.CombineMeshes(combineInstances.ToArray());
             return mesh;
         }
@@ -577,6 +581,7 @@ namespace WireGeneratorPathfinding
             Mesh mesh = new Mesh();
             List<CombineInstance> combineInstances = new List<CombineInstance>();
             combineInstances.AddRange(GenerateCurveParts());
+            mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
             mesh.CombineMeshes(combineInstances.ToArray());
             return mesh;
         }
@@ -596,8 +601,13 @@ namespace WireGeneratorPathfinding
             {
                 Vector3 difference= GetPosition(i + 1) - GetPosition(i);
 
+                if (curveSize > difference.magnitude/2)
+                {
+                    continue;
+                }
+
                 Vector3 beginning = GetPosition(i) - transform.position + curveSize*difference.normalized;
-                Vector3 end = GetPosition(i + 1) - transform.position - curveSize*difference.normalized;
+                Vector3 end = GetPosition(i + 1) - transform.position - curveSize * difference.normalized;
 
 
 
@@ -658,22 +668,31 @@ namespace WireGeneratorPathfinding
         {
             List<CombineInstance> combineInstances = new List<CombineInstance>();
 
-            //Curve Parts(90°)
-            //Assumes Open end point toward +Z and +Y and quadratic bounds
             for (int i = 1; i < points.Count - 1; i++)
             {
                 Vector3 differenceNext = -GetPosition(i) + GetPosition(i + 1);
                 Vector3 differencePrevious = -GetPosition(i) + GetPosition(i - 1);
 
                 Vector3 position = GetPosition(i) - transform.position;
-                Quaternion rotation = Quaternion.LookRotation(differenceNext, differencePrevious);
-                Vector3 scale = new Vector3(radius / curveMesh.bounds.extents.x, curveSize / curveMesh.bounds.extents.y, curveSize / curveMesh.bounds.extents.z) ;
+                //Quaternion rotation = Quaternion.LookRotation(differenceNext, differencePrevious);
+                //Vector3 scale = new Vector3(radius / curveMesh.bounds.extents.x, curveSize / curveMesh.bounds.extents.y, curveSize / curveMesh.bounds.extents.z) ;
 
-                Matrix4x4 transformMatrix = Matrix4x4.TRS(position, rotation, scale);
+                Mesh mesh = Instantiate<Mesh>(curveMesh);
+                
+                CombineInstance scaler = new CombineInstance { mesh = mesh, transform = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, new Vector3(radius / curveMesh.bounds.extents.x, radius / curveMesh.bounds.extents.y, 1)) };
+                Mesh mesh2 = new Mesh();
+                mesh2.CombineMeshes(new CombineInstance[] { scaler });
+
+                float thisCurveSizePrev = Mathf.Min(curveSize, differencePrevious.magnitude / 2f);
+                float thisCurveSizeNext = Mathf.Min(curveSize, differenceNext.magnitude / 2f);
+                WireGenerator.WireMesh.DeformMeshUsingBezierCurve(mesh2, WireGenerator.WireMesh.Axis.Z, differencePrevious.normalized * thisCurveSizePrev, differencePrevious.normalized * thisCurveSizePrev / 2, differenceNext.normalized * thisCurveSizeNext / 2, differenceNext.normalized * thisCurveSizeNext);
+
+
+                Matrix4x4 transformMatrix = Matrix4x4.TRS(position, Quaternion.identity/*rotation*/, Vector3.one/*scale*/);
 
                 combineInstances.Add(new CombineInstance
                 {
-                    mesh = curveMesh,
+                    mesh = mesh2,
                     transform = transformMatrix
                 }); ;
             }

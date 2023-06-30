@@ -37,10 +37,12 @@ namespace WireGenerator
 
                 Vector3 newDifference = q * difference;
                 vertices[i] = bezierCurvePoint+newDifference;
+
+
             }
             mesh.vertices = vertices;
-            //mesh.RecalculateNormals();
-            //mesh.RecalculateBounds();
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
         }
     }
 }
