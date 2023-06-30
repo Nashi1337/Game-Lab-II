@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEditorInternal;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -52,8 +53,6 @@ namespace WireGeneratorPathfinding
         public bool wireGenerated=false;
         private bool pointMoved = false;
         bool noWalls;
-        //0 = no wall touchy, 1 = wall touchy
-        int wireMode = 0;
 
         private void Awake()
         {
@@ -64,7 +63,11 @@ namespace WireGeneratorPathfinding
         {
             if (wireGenerated)
             {
-                if (wireMode == 0)
+                if(steps <= 2)
+                {
+                    noWalls = true;
+                }
+                if (noWalls)
                 {
                     if (steps != points.Count - 2)
                     {
@@ -85,7 +88,7 @@ namespace WireGeneratorPathfinding
                     if (pointMoved)
                     {
                         pointMoved = false;
-                        if (wireMode == 0)
+                        if (noWalls)
                             FindShortestPath();
                         else
                             FindPath();
@@ -103,7 +106,7 @@ namespace WireGeneratorPathfinding
                     if (pointMoved)
                     {
                         pointMoved = false;
-                        if (wireMode == 0)
+                        if (noWalls)
                             FindShortestPath();
                         else
                             FindPath();
@@ -247,6 +250,8 @@ namespace WireGeneratorPathfinding
                 return endPos;
             }
             else
+            {
+                noWalls = false;
                 return new Vector3(
                     //Mathf.Round
                     (closestPoint.x),
@@ -254,6 +259,7 @@ namespace WireGeneratorPathfinding
                     (closestPoint.y),
                     //Mathf.Round
                     (closestPoint.z));
+            }
         }
         Vector3 GetLastPoint()
         {
@@ -352,7 +358,6 @@ namespace WireGeneratorPathfinding
                     Reset();
                     FindShortestPath();
                 }
-                wireMode = 0;
 
                 //POINT 0
                 points[0].position = startPos;
@@ -446,7 +451,6 @@ namespace WireGeneratorPathfinding
                     Reset();
                     FindPath();
                 }
-                wireMode = 1;
 
                 startPos = startPointGO.transform.position;
                 endPos = endPointGO.transform.position;
@@ -577,6 +581,14 @@ namespace WireGeneratorPathfinding
                                     GetLastPoint().y,
                                     endPos.z+0.5f)));
                 }
+
+                if (steps <= 2)
+                {
+                    noWalls = true;
+                    Reset();
+                    FindShortestPath();
+                }
+
                 wireGenerated = true;
                 GenerateMesh();
             }
