@@ -2,34 +2,75 @@ using UnityEngine;
 using UnityEditor;
 using UnityEditor.EditorTools;
 using System.Linq;
+using System;
+using UnityEditor.SceneManagement;
 
 namespace WireGeneratorPathfinding
 {
     [CustomEditor(typeof(WirePathfinding))]
-    public class WireEditorPathfindingEditor : Editor
+    public class WireEditorPathfinding : Editor
     {
         SerializedProperty radius;
         SerializedProperty corners;
-        SerializedProperty steps;
         SerializedProperty points;
+
+
+        SerializedProperty straightMesh;
+        SerializedProperty curveMesh;
+        SerializedProperty sizePerStraightMesh;
+        SerializedProperty numberPerStraightSegment;
+        SerializedProperty straightPartMeshGenerationMode;
+        SerializedProperty curveSize;
+
         SerializedProperty cornerPart;
         SerializedProperty pipePart;
         SerializedProperty startPointGO;
         SerializedProperty endPointGO;
+        GameObject startPoint;
+        GameObject endPoint;
+
 
         bool showWire;
+
+        private void UndoCallbackGenerateMesh()
+        {
+            //Refreshes MeshRenderer visual state, not sure if there is an easier way to do it
+            WirePathfinding wire = target as WirePathfinding;
+
+            MeshFilter meshFilter = wire.GetComponent<MeshFilter>();
+            Mesh sharedMesh = meshFilter.sharedMesh;
+            meshFilter.sharedMesh = null;
+            meshFilter.sharedMesh = sharedMesh;
+        }
 
         void OnEnable()
         {
             points = serializedObject.FindProperty("points");
             radius = serializedObject.FindProperty("radius");
             corners = serializedObject.FindProperty("corners");
-            steps = serializedObject.FindProperty("steps");
-            cornerPart = serializedObject.FindProperty("cornerPart");
-            pipePart = serializedObject.FindProperty("pipePart");
+
+            straightMesh = serializedObject.FindProperty("straightMesh");
+            curveMesh = serializedObject.FindProperty("curveMesh");
+            sizePerStraightMesh = serializedObject.FindProperty("sizePerStraightMesh");
+            numberPerStraightSegment = serializedObject.FindProperty("numberPerStraightSegment");
+            straightPartMeshGenerationMode = serializedObject.FindProperty("straightPartMeshGenerationMode");
+            curveSize = serializedObject.FindProperty("curveSize");
+
             startPointGO = serializedObject.FindProperty("startPointGO");
             endPointGO = serializedObject.FindProperty("endPointGO");
+            startPoint = startPointGO.serializedObject.targetObject as GameObject;
+            endPoint = endPointGO.serializedObject.targetObject as GameObject;
+
+
+
             showWire = true;
+
+            Undo.undoRedoPerformed += UndoCallbackGenerateMesh;
+        }
+
+        private void OnDisable()
+        {
+            Undo.undoRedoPerformed -= UndoCallbackGenerateMesh;
         }
 
         public void OnSceneGUI()
@@ -44,6 +85,7 @@ namespace WireGeneratorPathfinding
                 }
                 Handles.SphereHandleCap(0, wire.GetPosition(i), Quaternion.identity, 0.1f, EventType.Repaint);
             }
+
             EditorGUI.BeginChangeCheck();
             EditorGUILayout.PropertyField(startPointGO);
             EditorGUILayout.PropertyField(endPointGO);
@@ -51,6 +93,7 @@ namespace WireGeneratorPathfinding
             {
                 Debug.Log("something changed");
             }
+
         }
         public override void OnInspectorGUI()
         {
@@ -65,26 +108,46 @@ namespace WireGeneratorPathfinding
                 Undo.RecordObject(wire, "Find Start and End Points");
                 wire.FindStartEnd();
             }
+
             if(GUILayout.Button("Find Path Along Wall"))
             {
                 Undo.RecordObject(wire, "Find Path Along Wall");
                 wire.FindPath();
             }
-            if(GUILayout.Button("Find Shortest Path"))
+
+            if (GUILayout.Button("Generate Mesh (Trucy)"))
             {
-                Undo.RecordObject(wire, "Find Shortest Path");
-                wire.FindShortestPath();
+                Undo.IncrementCurrentGroup();
+                Mesh sharedMesh = wire.GetComponent<MeshFilter>().sharedMesh;
+                try
+                {
+                    Undo.DestroyObjectImmediate(sharedMesh);
+                }
+                catch (ArgumentNullException)
+                {
+
+                }
+                Undo.RecordObject(wire.GetComponent<MeshFilter>(), "Remove mesh from mesh filter");
+                wire.GetComponent<MeshFilter>().sharedMesh = null;
+                Mesh newMesh = wire.GenerateMeshUsingPrefab();
+                Undo.RegisterCreatedObjectUndo(newMesh, "Create Mesh");
+                Undo.RecordObject(wire, "Change Mesh");
+                wire.SetMesh(newMesh);  
+                Undo.SetCurrentGroupName("Generate Mesh");
             }
-            if(GUILayout.Button("Create Pipe"))
+
+            if (GUILayout.Button("Create Pipe(Nashi)"))
             {
                 Undo.RecordObject(wire, "Create Pipe");
                 wire.CreatePipe();
             }
-            if(GUILayout.Button("Delete Pipe"))
+            if (GUILayout.Button("Delete Pipe(Nashi)"))
             {
                 Undo.RecordObject(wire, "Delete Pipe");
                 wire.DeletePipe();
             }
+
+
             if (GUILayout.Button("Reset"))
             {
                 Undo.RecordObject(wire, "Reset");
@@ -97,16 +160,26 @@ namespace WireGeneratorPathfinding
             EditorGUILayout.PropertyField(points);
             EditorGUILayout.PropertyField(radius);
             EditorGUILayout.PropertyField(corners);
-            EditorGUILayout.PropertyField(steps);
-            EditorGUILayout.PropertyField(cornerPart);
-            EditorGUILayout.PropertyField(pipePart);
-            EditorGUILayout.PropertyField(startPointGO);
-            EditorGUILayout.PropertyField(endPointGO);
+            EditorGUILayout.PropertyField(straightMesh);
+            EditorGUILayout.PropertyField(curveMesh);
+            EditorGUILayout.PropertyField(sizePerStraightMesh);
+            EditorGUILayout.PropertyField(numberPerStraightSegment);
+            EditorGUILayout.PropertyField(straightPartMeshGenerationMode);
+            EditorGUILayout.PropertyField(curveSize);
+
 
             if (EditorGUI.EndChangeCheck()) {
                 wire.ShowWire(showWire);
                 serializedObject.ApplyModifiedProperties();
-                wire.GenerateMesh();
+
+                Undo.RecordObject(wire.GetComponent<MeshFilter>(), "Remove mesh from mesh filter");
+                wire.GetComponent<MeshFilter>().sharedMesh = null;
+                Mesh newMesh = wire.GenerateMeshUsingPrefab();
+                Undo.RegisterCreatedObjectUndo(newMesh, "Create Mesh");
+                Undo.RecordObject(wire, "Change Mesh");
+                wire.SetMesh(newMesh);
+                Undo.SetCurrentGroupName("Generate Mesh");
+                //wire.GenerateMesh();
             }
         }
     }
@@ -121,10 +194,18 @@ namespace WireGeneratorPathfinding
             for (int i = 0; i < wire.points.Count;i++)
             {
                 wire.SetPosition(i,Handles.PositionHandle(wire.GetPosition(i), Quaternion.identity));
+                Undo.RecordObject(wire, "Change Control Point Position");
             }
             if (EditorGUI.EndChangeCheck())
             {
-                wire.GenerateMesh();
+                Undo.RecordObject(wire.GetComponent<MeshFilter>(), "Remove mesh from mesh filter");
+                wire.GetComponent<MeshFilter>().sharedMesh = null;
+                Mesh newMesh = wire.GenerateMeshUsingPrefab();
+                Undo.RegisterCreatedObjectUndo(newMesh, "Create Mesh");
+                Undo.RecordObject(wire, "Change Mesh");
+                wire.SetMesh(newMesh);
+                Undo.SetCurrentGroupName("Generate Mesh");
+                //wire.GenerateMesh();
             }
         }
 
