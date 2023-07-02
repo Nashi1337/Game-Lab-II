@@ -56,7 +56,7 @@ public class MockupLevelEditor : MonoBehaviour
             wire = Instantiate(wirePrefab);
             wire.transform.position = Vector3.zero;
             wire.name = "WireGenerated";
-            wire.gameObject.GetComponent<WireGeneratorPathfinding.WirePathfinding>().steps = 2;
+            //wire.gameObject.GetComponent<WireGenerator.Wire>().steps = 2;
         }
     }
 
@@ -78,6 +78,6 @@ public class MockupLevelEditor : MonoBehaviour
         wire.gameObject.GetComponent<WireGeneratorPathfinding.WirePathfinding>().corners = (int)Corners.value;
         wire.gameObject.GetComponent<WireGeneratorPathfinding.WirePathfinding>().Reset();
         wire.gameObject.GetComponent<WireGeneratorPathfinding.WirePathfinding>().FindShortestPath();
-        //wire.gameObject.GetComponent<WireGeneratorPathfinding.WirePathfinding>().GenerateMesh();
+        //wire.gameObject.GetComponent<WireGenerator.WirePathfinding>().GenerateMesh();
     }
 }

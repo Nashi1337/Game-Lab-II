@@ -380,11 +380,6 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 2c597959e30da3e46ad6d723e7a170d2, type: 3}
---- !u!1 &902877491 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 1469720421492758612, guid: 2c597959e30da3e46ad6d723e7a170d2, type: 3}
-  m_PrefabInstance: {fileID: 902877490}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &904099498
 GameObject:
   m_ObjectHideFlags: 0
@@ -665,6 +660,42 @@ PrefabInstance:
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 1056299389}
+    - target: {fileID: 3592906386120692962, guid: da049d428f38dff4785bd80639533f1e, type: 3}
+      propertyPath: endPos.x
+      value: -2.502
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592906386120692962, guid: da049d428f38dff4785bd80639533f1e, type: 3}
+      propertyPath: endPos.y
+      value: 1.498
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592906386120692962, guid: da049d428f38dff4785bd80639533f1e, type: 3}
+      propertyPath: endPos.z
+      value: 0.831
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592906386120692962, guid: da049d428f38dff4785bd80639533f1e, type: 3}
+      propertyPath: wireGenerated
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592906386120692962, guid: da049d428f38dff4785bd80639533f1e, type: 3}
+      propertyPath: points.Array.size
+      value: 12
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592906386120692962, guid: da049d428f38dff4785bd80639533f1e, type: 3}
+      propertyPath: points.Array.data[0].position.x
+      value: 3.209
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592906386120692962, guid: da049d428f38dff4785bd80639533f1e, type: 3}
+      propertyPath: points.Array.data[0].position.y
+      value: -1.356
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592906386120692962, guid: da049d428f38dff4785bd80639533f1e, type: 3}
+      propertyPath: points.Array.data[0].position.z
+      value: 0.1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592906386120692962, guid: da049d428f38dff4785bd80639533f1e, type: 3}
+      propertyPath: points.Array.data[1].position.x
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3592906386120692963, guid: da049d428f38dff4785bd80639533f1e, type: 3}
       propertyPath: m_Name
       value: Wire
@@ -713,69 +744,8 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents:
-    - {fileID: 3592906386120692962, guid: da049d428f38dff4785bd80639533f1e, type: 3}
+    m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: da049d428f38dff4785bd80639533f1e, type: 3}
---- !u!1 &1232828468 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 3592906386120692963, guid: da049d428f38dff4785bd80639533f1e, type: 3}
-  m_PrefabInstance: {fileID: 1232828467}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &1232828469
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1232828468}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5d71deb96cd2f3d40944c4aa4b9041ac, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  startPoint: {x: 0, y: 0, z: 0}
-  endPoint: {x: 0, y: 0, z: 0}
-  weight: 1
-  sagOffset: 0
-  points:
-  - position: {x: 3.209, y: -1.356, z: 0.1}
-  - position: {x: 0, y: 0, z: 0}
-  - position: {x: 0, y: 0, z: 0}
-  - position: {x: 0, y: 0, z: 0}
-  - position: {x: 0, y: 0, z: 0}
-  - position: {x: 0, y: 0, z: 0}
-  - position: {x: 0, y: -1.66734, z: 0}
-  - position: {x: 0, y: -1.66734, z: -0.69}
-  - position: {x: 0, y: -2.19266, z: -0.69}
-  - position: {x: 0, y: -2.19266, z: 0}
-  - position: {x: 0, y: 0, z: 0}
-  - position: {x: 0, y: 0, z: 0.5}
-  - position: {x: 0, y: 0, z: 0}
-  - position: {x: 0, y: 0, z: 0}
-  - position: {x: 0, y: 0, z: 0}
-  - position: {x: 0, y: 0, z: 0}
-  - position: {x: 0, y: -1.66734, z: 0}
-  - position: {x: 0, y: -1.66734, z: -0.69}
-  - position: {x: 0, y: -2.19266, z: -0.69}
-  - position: {x: 0, y: -2.19266, z: 0}
-  - position: {x: 0, y: 0, z: 0}
-  - position: {x: 0, y: 0, z: 0.5}
-  radius: 0.05
-  corners: 18
-  straightMesh: {fileID: 5637591313992399821, guid: 0f1b58b5cea34324fa3264a301920767, type: 3}
-  sizePerStraightMesh: 0.2
-  numberPerStraightSegment: 1
-  curveSize: 0.1
-  curveMesh: {fileID: 5637591313992399821, guid: 0f1b58b5cea34324fa3264a301920767, type: 3}
-  straightPartMeshGenerationMode: 2
-  cornerPart: {fileID: 0}
-  pipePart: {fileID: 0}
-  pipeParent: {fileID: 1232828468}
-  startPointGO: {fileID: 902877491}
-  endPointGO: {fileID: 1570626327}
-  startPos: {x: 3.209, y: -1.356, z: 0.1}
-  endPos: {x: -2.502, y: 1.498, z: 0.831}
-  wireGenerated: 1
 --- !u!1001 &1570626326
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -841,11 +811,6 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: e2c9acb445c2858449a73fe04aa6ea96, type: 3}
---- !u!1 &1570626327 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 5019606349736228067, guid: e2c9acb445c2858449a73fe04aa6ea96, type: 3}
-  m_PrefabInstance: {fileID: 1570626326}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &2089676157
 GameObject:
   m_ObjectHideFlags: 0

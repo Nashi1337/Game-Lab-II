@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEditorInternal;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Runtime.Serialization;
 
 namespace WireGeneratorPathfinding
 {
@@ -37,11 +38,17 @@ namespace WireGeneratorPathfinding
         public int corners=6;
         [Range(0, 5)]
         public int steps;
-        public GameObject cornerPart;
-        public GameObject pipePart;
-        [SerializeField]
-        public GameObject pipeParent;
-        List<GameObject> pipeParts = new List<GameObject>();
+
+        //Assumes mesh for straight parts is aligned with z-Axis
+        [SerializeField] private Mesh straightMesh;
+        [SerializeField] public float sizePerStraightMesh = 0.2f;
+        [SerializeField] public int numberPerStraightSegment = 1;
+
+        [SerializeField] private float curveSize = 0.1f;
+        [SerializeField] private Mesh curveMesh;
+
+        [SerializeField] StraightPartMeshGenerationMode straightPartMeshGenerationMode = StraightPartMeshGenerationMode.RoundAndScaleLast;
+
         [SerializeField]
         public GameObject startPointGO;
         [SerializeField]
@@ -135,7 +142,6 @@ namespace WireGeneratorPathfinding
             startPos = startPointGO.transform.position;
             endPos = endPointGO.transform.position;
             wireGenerated = false;
-            pipeParent = this.gameObject;
             points = new List<ControlPoint>() { new ControlPoint(new Vector3(0, 0, 0)), new ControlPoint(new Vector3(1, 0, 0)) };
 
             mesh = new Mesh{name = "Wire"};
@@ -598,6 +604,165 @@ namespace WireGeneratorPathfinding
                 FindPath();
             }
         }
+
+        public void SetMesh(Mesh mesh)
+        {
+            meshFilter = GetComponent<MeshFilter>();
+            meshFilter.sharedMesh = mesh;
+        }
+
+        public Mesh GenerateMeshUsingPrefab()
+        {
+            //Assumes mesh for straight parts is aligned with z-Axis
+            //Curve Parts(90)
+            //Assumes Open end point toward +Z and +Y and quadratic bounds for curves
+            CombineInstance[] combineInstances = new CombineInstance[2];
+
+            combineInstances[0] = new CombineInstance() { mesh = GenerateStraightPartMesh(), transform = Matrix4x4.identity };
+
+            combineInstances[1] = new CombineInstance() { mesh = GenerateCurvePartMesh(), transform = Matrix4x4.identity };
+            //combineInstances[1] = new CombineInstance() { mesh = WireGenerator.WireMesh.DeformMeshUsingBezierCurve(Instantiate<Mesh>(straightMesh)) }
+
+            Mesh mesh = new Mesh();
+            mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+            mesh.CombineMeshes(combineInstances, false);
+            return mesh;
+        }
+
+        public Mesh GenerateStraightPartMesh()
+        {
+            Mesh mesh = new Mesh();
+            List<CombineInstance> combineInstances = new List<CombineInstance>();
+            combineInstances.AddRange(GenerateStraightParts());
+            mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+            mesh.CombineMeshes(combineInstances.ToArray());
+            return mesh;
+        }
+
+        public Mesh GenerateCurvePartMesh()
+        {
+            Mesh mesh = new Mesh();
+            List<CombineInstance> combineInstances = new List<CombineInstance>();
+            combineInstances.AddRange(GenerateCurveParts());
+            mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+            mesh.CombineMeshes(combineInstances.ToArray());
+            return mesh;
+        }
+
+        enum StraightPartMeshGenerationMode
+        {
+            FixedNumber, RoundAndScaleAll, RoundAndScaleLast
+        }
+        private List<CombineInstance> GenerateStraightParts()
+        {
+            List<CombineInstance> combineInstances = new List<CombineInstance>();
+
+
+            for (int i = 0; i < points.Count - 1; i++)
+            {
+                Vector3 difference = GetPosition(i + 1) - GetPosition(i);
+
+                if (curveSize > difference.magnitude / 2)
+                {
+                    continue;
+                }
+
+                Vector3 beginning = GetPosition(i) - transform.position + curveSize * difference.normalized;
+                Vector3 end = GetPosition(i + 1) - transform.position - curveSize * difference.normalized;
+
+
+
+                int numberOfSectionDivisions = 0;
+                switch (straightPartMeshGenerationMode)
+                {
+                    case StraightPartMeshGenerationMode.FixedNumber:
+                        numberOfSectionDivisions = numberPerStraightSegment;
+                        break;
+                    case StraightPartMeshGenerationMode.RoundAndScaleAll:
+                        numberOfSectionDivisions = Math.Max(1, Mathf.RoundToInt((end - beginning).magnitude / sizePerStraightMesh));
+                        break;
+                    case StraightPartMeshGenerationMode.RoundAndScaleLast:
+                        numberOfSectionDivisions = Math.Max(1, Mathf.RoundToInt((end - beginning).magnitude / sizePerStraightMesh)) - 1;
+                        end = beginning + numberOfSectionDivisions * sizePerStraightMesh * (end - beginning).normalized;
+                        break;
+                    //default: throw new UnexpectedEnumValueException<StraightPartMeshGenerationMode>(straightPartMeshGenerationMode);
+                }
+
+                combineInstances.AddRange(GenerateStraightSection(beginning, end, numberOfSectionDivisions));
+                if (straightPartMeshGenerationMode == StraightPartMeshGenerationMode.RoundAndScaleLast)
+                {
+                    combineInstances.Add(GenerateStraightPart(end, GetPosition(i + 1) - transform.position - curveSize * difference.normalized));
+                }
+            }
+
+            return combineInstances;
+        }
+
+        private List<CombineInstance> GenerateStraightSection(Vector3 sectionBeginning, Vector3 sectionEnd, int sectionDivisions)
+        {
+            List<CombineInstance> combineInstances = new List<CombineInstance>();
+            for (int i = 0; i < sectionDivisions; i++)
+            {
+                Vector3 difference = sectionEnd - sectionBeginning;
+                Vector3 partSize = difference / sectionDivisions;
+
+                Vector3 partBeginning = sectionBeginning + partSize * i;
+                Vector3 partEnd = sectionBeginning + partSize * (i + 1);
+                combineInstances.Add(GenerateStraightPart(partBeginning, partEnd));
+            }
+            return combineInstances;
+        }
+
+        private CombineInstance GenerateStraightPart(Vector3 beginning, Vector3 end)
+        {
+            Vector3 difference = end - beginning;
+
+            Vector3 translation = beginning + difference / 2;
+            Quaternion rotation = Quaternion.LookRotation(difference);
+            Vector3 scaling = new Vector3(radius / straightMesh.bounds.extents.x, radius / straightMesh.bounds.extents.y, (end - beginning).magnitude / straightMesh.bounds.size.z);
+
+            Matrix4x4 transformMatrix = Matrix4x4.TRS(translation, rotation, scaling);
+            return new CombineInstance() { mesh = straightMesh, transform = transformMatrix };
+        }
+
+        private List<CombineInstance> GenerateCurveParts()
+        {
+            List<CombineInstance> combineInstances = new List<CombineInstance>();
+
+            for (int i = 1; i < points.Count - 1; i++)
+            {
+                Vector3 differenceNext = -GetPosition(i) + GetPosition(i + 1);
+                Vector3 differencePrevious = -GetPosition(i) + GetPosition(i - 1);
+
+                Vector3 position = GetPosition(i) - transform.position;
+                //Quaternion rotation = Quaternion.LookRotation(differenceNext, differencePrevious);
+                //Vector3 scale = new Vector3(radius / curveMesh.bounds.extents.x, curveSize / curveMesh.bounds.extents.y, curveSize / curveMesh.bounds.extents.z) ;
+
+                Mesh mesh = Instantiate<Mesh>(curveMesh);
+
+                CombineInstance scaler = new CombineInstance { mesh = mesh, transform = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, new Vector3(radius / curveMesh.bounds.extents.x, radius / curveMesh.bounds.extents.y, 1)) };
+                Mesh mesh2 = new Mesh();
+                mesh2.CombineMeshes(new CombineInstance[] { scaler });
+
+                float thisCurveSizePrev = Mathf.Min(curveSize, differencePrevious.magnitude / 2f);
+                float thisCurveSizeNext = Mathf.Min(curveSize, differenceNext.magnitude / 2f);
+                WireGenerator.WireMesh.DeformMeshUsingBezierCurve(mesh2, WireGenerator.WireMesh.Axis.Z, differencePrevious.normalized * thisCurveSizePrev, differencePrevious.normalized * thisCurveSizePrev / 2, differenceNext.normalized * thisCurveSizeNext / 2, differenceNext.normalized * thisCurveSizeNext);
+
+                Matrix4x4 transformMatrix = Matrix4x4.TRS(position, Quaternion.identity/*rotation*/, Vector3.one/*scale*/);
+
+                combineInstances.Add(new CombineInstance
+                {
+                    mesh = mesh2,
+                    transform = transformMatrix
+                }); ;
+            }
+
+            return combineInstances;
+        }
+
+
+
+
         public Vector3 GetPosition(int i) {
             return (transform.position + points[i].position);
         }
@@ -699,194 +864,6 @@ namespace WireGeneratorPathfinding
                     this.gameObject.GetComponent<MeshRenderer>().enabled = false;
                 }
             }
-        }
-
-        public void CreatePipe()
-        {
-            for(int i = 1; i < points.Count-1; i++)
-            {
-                Vector3 rotation = CalculateRotation(points[i].position, points[i - 1].position);
-                GameObject part = Instantiate(pipePart, transform.TransformPoint((points[i - 1].position + points[i].position) / 2), Quaternion.Euler(rotation*90), pipeParent.transform);
-                part.transform.localScale = (scaleFactor(points[i].position, points[i - 1].position));
-                pipeParts.Add(part);
-                rotation = CalculateRotation(points[i-1].position, points[i].position, points[i + 1].position);
-                part = Instantiate(cornerPart, transform.TransformPoint(points[i].position), Quaternion.Euler(rotation ), pipeParent.transform);
-                pipeParts.Add(part);
-            }
-            GameObject lastPart = Instantiate(pipePart, transform.TransformPoint((points[points.Count-2].position + GetLastPoint()) / 2), Quaternion.Euler(90, 0, 0), pipeParent.transform);
-            lastPart.transform.localScale = scaleFactor(points[GetLastPointIndex()].position, points[GetLastPointIndex() - 1].position);
-            pipeParts.Add(lastPart);
-        }
-        public void DeletePipe()
-        {
-            foreach (GameObject pipePart in pipeParts)
-            {
-                DestroyImmediate(pipePart);
-            }
-        }
-
-        public Vector3 CalculateRotation(Vector3 point1, Vector3 point2)
-        {
-            Vector3 distance = point1 - point2;
-            Vector3 rotation = new Vector3(0,0,0);
-            if(distance.x > 0)
-            {
-                rotation = new Vector3(0, 0, 1);
-            }
-            else if(distance.y > 0)
-            {
-                rotation = new Vector3(0, 1, 0);
-            }
-            else if(distance.z > 0)
-            {
-                rotation = new Vector3 (1, 0, 0);
-            }
-            else if(distance.x < 0)
-            {
-                rotation = new Vector3(0, 0, 1);
-            }
-            else if(distance.y < 0)
-            {
-                rotation = new Vector3(0, 0, 0);
-            }
-            else if(distance.z < 0)
-            {
-                rotation = new Vector3(1, 0, 0);
-            }
-
-            return rotation;
-        }
-        public Vector3 CalculateRotation(Vector3 point1, Vector3 point2, Vector3 point3)
-        {
-            Vector3 distance1 = point2 - point1;
-            Vector3 distance2 = point3 - point2;
-            Vector3 rotation = new Vector3(0, 0, 0);
-            if (distance1.x > 0)
-            {
-                if(distance2.y > 0)
-                {
-                    rotation = new Vector3(0, 0, 180);
-                }
-                else if(distance2.y < 0)
-                {
-                    rotation = new Vector3(0, 0, 270);
-                }
-                else if(distance2.z > 0)
-                {
-                    rotation = new Vector3(90, 0, 180);
-                }
-                else if(distance2.z < 0)
-                {
-                    rotation = new Vector3(-90, 0, 180);
-                }
-            }
-            else if (distance1.y > 0)
-            {
-                if (distance2.x > 0)
-                {
-                    rotation = new Vector3(0, 0, 0);
-                }
-                else if (distance2.x < 0)
-                {
-                    rotation = new Vector3(0, 180, 0);
-                }
-                else if (distance2.z > 0)
-                {
-                    rotation = new Vector3(0, 270, 0);
-                }
-                else if (distance2.z < 0)
-                {
-                    rotation = new Vector3(0, 90, 0);
-                }
-            }
-            else if (distance1.y < 0)
-            {
-                if (distance2.x > 0)
-                {
-                    rotation = new Vector3(0, 0, 90);
-                }
-                else if (distance2.x < 0)
-                {
-                    rotation = new Vector3(0, 180, 0);
-                }
-                else if (distance2.z > 0)
-                {
-                    rotation = new Vector3(0, 270, 0);
-                }
-                else if (distance2.z < 0)
-                {
-                    rotation = new Vector3(0, 90, 90);
-                }
-            }
-            else if (distance1.z > 0)
-            {
-                if (distance2.x > 0)
-                {
-                    rotation = new Vector3(90, 0, 0);
-                }
-                else if (distance2.x < 0)
-                {
-                    rotation = new Vector3(90, 90, 0);
-                }
-                else if (distance2.y > 0)
-                {
-                    rotation = new Vector3(180, 90, 0);
-                }
-                else if (distance2.y < 0)
-                {
-                    rotation = new Vector3(0, 90, 0);
-                }
-            }
-            else if (distance1.z < 0)
-            {
-                if (distance2.x > 0)
-                {
-                    rotation = new Vector3(90, 270, 0);
-                }
-                else if (distance2.x < 0)
-                {
-                    rotation = new Vector3(270, 270, 0);
-                }
-                else if (distance2.y > 0)
-                {
-                    rotation = new Vector3(180, 270, 0);
-                }
-                else if (distance2.y < 0)
-                {
-                    rotation = new Vector3(0, 270, 0);
-                }
-            }
-            return rotation;
-        }
-
-        public Vector3 scaleFactor(Vector3 point1, Vector3 point2)
-        {
-            Vector3 distance = point1 - point2;
-            if (distance.x > 0)
-            {
-                return new Vector3(0.2f, distance.x / 2, 0.2f);
-            }
-            else if (distance.y > 0)
-            {
-                return new Vector3(0.2f, distance.y / 2, 0.2f);
-            }
-            else if (distance.z > 0)
-            {
-                return new Vector3(0.2f, distance.z / 2, 0.2f);
-            }
-            else if (distance.x < 0)
-            {
-                return new Vector3(0.2f, Mathf.Abs(distance.x) / 2, 0.2f);
-            }
-            else if (distance.y < 0)
-            {
-                return new Vector3(0.2f, Mathf.Abs(distance.y) / 2, 0.2f);
-            }
-            else if (distance.z < 0)
-            {
-                return new Vector3(0.2f, Mathf.Abs(distance.z) / 2, 0.2f);
-            }
-            else return new Vector3(0.2f, 0.2f, 0.2f);
         }
     }
 
