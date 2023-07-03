@@ -352,6 +352,9 @@ namespace WireGeneratorPathfinding
                 points[points.Count - 1].position.z = points[points.Count - 4].position.z;
             }
 
+            GetComponent<MeshFilter>().sharedMesh = null;
+            Mesh newMesh = GenerateMeshUsingPrefab();
+            SetMesh(newMesh);
         }
 
         public void FindShortestPath()
@@ -439,7 +442,9 @@ namespace WireGeneratorPathfinding
                         points[4].position.z + Vector3.Distance(points[6].position, points[4].position) / 2);
                 }
                 wireGenerated = true;
-                GenerateMesh();
+                GetComponent<MeshFilter>().sharedMesh = null;
+                Mesh newMesh = GenerateMeshUsingPrefab();
+                SetMesh(newMesh);
             }
             else
             {
