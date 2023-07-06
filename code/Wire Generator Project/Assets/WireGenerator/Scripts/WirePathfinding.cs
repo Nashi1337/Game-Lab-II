@@ -36,8 +36,6 @@ namespace WireGeneratorPathfinding
         float lengthFactor = 1f;
         public float radius=2f;
         public int corners=6;
-        [Range(0, 5)]
-        public int steps;
 
         //Assumes mesh for straight parts is aligned with z-Axis
         [SerializeField] private Mesh straightMesh;
@@ -64,25 +62,12 @@ namespace WireGeneratorPathfinding
         private void Awake()
         {
             Reset();
-            FindShortestPath();
+            FindPath();
         }
         void Update()
         {
             if (wireGenerated)
             {
-                if(steps <= 2)
-                {
-                    noWalls = true;
-                }
-                if (noWalls)
-                {
-                    if (steps != points.Count - 2)
-                    {
-                        Debug.Log("Step Count should be " + steps + " but is " + (points.Count - 2));
-                        Reset();
-                        FindShortestPath();
-                    }
-                }
                 if (startPos != startPointGO.transform.position)
                 {
                     if (!pointMoved)
@@ -95,10 +80,7 @@ namespace WireGeneratorPathfinding
                     if (pointMoved)
                     {
                         pointMoved = false;
-                        if (noWalls)
-                            FindShortestPath();
-                        else
-                            FindPath();
+                        FindPath();
                     }
                 }
                 if (endPos != endPointGO.transform.position)
@@ -113,10 +95,7 @@ namespace WireGeneratorPathfinding
                     if (pointMoved)
                     {
                         pointMoved = false;
-                        if (noWalls)
-                            FindShortestPath();
-                        else
-                            FindPath();
+                        FindPath();
                     }
                 }
             }
@@ -150,7 +129,7 @@ namespace WireGeneratorPathfinding
             float tension = weight * lengthFactor;
             float sag = tension + weight + sagOffset;
             float minimum = CalculateWireSag(sag, 0.5f);
-            GenerateMesh();
+            SetMesh(GenerateMeshUsingPrefab());
         }
         public void FindStartEnd()
         {
@@ -158,61 +137,9 @@ namespace WireGeneratorPathfinding
             endPointGO = GameObject.FindGameObjectWithTag("endPoint");
         }
 
-        public Vector3 NextPoint(Vector3 endPoint, Vector3 currentPosition, Vector3 direction, Vector3 rayDirection, int point)
-        {
-            float distance = Vector3.Distance(endPoint,currentPosition);
-            for(float tick = 1f; tick <= distance;tick += 0.2f)
-            {
-                Vector3 offset = tick * direction;
-                currentPosition = points[point].position +  offset;
-                if(Physics.Raycast(transform.TransformPoint(currentPosition), direction, 0.2f))
-                {
-                    break;
-                }
-                else if (!Physics.Raycast(transform.TransformPoint(currentPosition), rayDirection, 1f))
-                {
-                    break;
-                }
-                else if (direction == Vector3.right || direction == Vector3.left)
-                {
-                    if (currentPosition.x >= endPoint.x)
-                    {
-                        currentPosition.x = endPoint.x;
-                        break;
-                    }
-                }
-                else if (direction == Vector3.up || direction == Vector3.down)
-                {
-                    if (currentPosition.y >= endPoint.y)
-                    {
-                        currentPosition.y = endPoint.y;
-                        break;
-                    }
-                }
-                else if (direction == Vector3.back || direction == Vector3.forward)
-                {
-                    Debug.Log(currentPosition);
-                    if (Mathf.Round(currentPosition.z) >= Mathf.Round(endPoint.z))
-                    {
-                        Debug.Log("bla");
-                        currentPosition.z = endPoint.z;
-                        break;
-                    }
-                }
-                Debug.DrawRay(currentPosition, rayDirection * 0.5f, Color.red, 10, true);
-            }
-            return new Vector3(
-                //Mathf.Round
-                (currentPosition.x),
-                //Mathf.Round
-                (currentPosition.y),
-                //Mathf.Round
-                (currentPosition.z));
-        }
-
         public RaycastHit CastRay(Vector3 start, Vector3 direction)
         {
-            Ray ray = new Ray(transform.TransformPoint(start), direction);
+            Ray ray = new Ray(transform.TransformPoint(start), transform.TransformPoint(direction));
             Physics.Raycast(ray, out RaycastHit hitData, Mathf.Infinity);
             return hitData;
         }
@@ -277,181 +204,6 @@ namespace WireGeneratorPathfinding
             return points.Count-1;
         }
 
-        void FoundObstacle(RaycastHit obstacle, Vector3 direction)
-        {
-            Collider collider = obstacle.collider;
-            Vector3 center = collider.bounds.center;
-            float distanceToTop = Mathf.Abs(center.y + collider.bounds.extents.y);
-            float distanceToBottom = Mathf.Abs(center.y - collider.bounds.extents.y);
-            Vector3 closestPoint;
-
-            if (direction == Vector3.right)
-            {
-                points.Add(
-                    new ControlPoint(
-                        new Vector3(center.x - collider.bounds.extents.x - spacingX.x, 
-                        GetLastPoint().y, 
-                        GetLastPoint().z)));
-                if (distanceToTop < distanceToBottom)
-                {
-                    closestPoint = new Vector3(GetLastPoint().x, center.y + collider.bounds.extents.y, GetLastPoint().z);
-                    points.Add(new ControlPoint(closestPoint + spacingY));
-                }
-                else
-                {
-                    closestPoint = new Vector3(GetLastPoint().x, center.y - collider.bounds.extents.y, GetLastPoint().z);
-                    points.Add(new ControlPoint(closestPoint - spacingY));
-                }
-                points.Add(new ControlPoint(GetLastPoint() + new Vector3(2*collider.bounds.extents.x, 0, 0) + 2 * spacingX));
-                points.Add(new ControlPoint(GetLastPoint()));
-                points[points.Count - 1].position.y = points[points.Count - 4].position.y;
-            }
-            else if (direction == Vector3.forward)
-            {
-                points.Add(
-                    new ControlPoint(
-                        new Vector3(GetLastPoint().x, 
-                        GetLastPoint().y, 
-                        center.z - spacingZ.z)));
-                if (distanceToTop < distanceToBottom)
-                {
-                    closestPoint = new Vector3(GetLastPoint().x, center.y + collider.bounds.extents.y, GetLastPoint().z);
-                    points.Add(new ControlPoint(closestPoint + spacingY));
-                }
-                else
-                {
-                    closestPoint = new Vector3(GetLastPoint().x, center.y - collider.bounds.extents.y, GetLastPoint().z);
-                    points.Add(new ControlPoint(closestPoint - spacingY));
-                }
-                points.Add(new ControlPoint(GetLastPoint() + new Vector3(0, 0, 2*collider.bounds.extents.z) + 2 * spacingZ));
-                points.Add(new ControlPoint(GetLastPoint()));
-                points[points.Count - 1].position.y = points[points.Count - 4].position.y;
-            }
-            else
-            {
-                points.Add(
-                    new ControlPoint(
-                        new Vector3(GetLastPoint().x, 
-                        center.y + collider.bounds.extents.y + spacingY.y, 
-                        GetLastPoint().z)));
-
-                points.Add(
-                    new ControlPoint(
-                        new Vector3(
-                            GetLastPoint().x,
-                            GetLastPoint().y,
-                            GetLastPoint().z - collider.bounds.extents.z - spacingZ.z)));
-
-                points.Add(
-                    new ControlPoint(
-                        GetLastPoint() - new Vector3(0, 2*collider.bounds.extents.y, 0) - 2 * spacingY));
-
-                points.Add(
-                    new ControlPoint(
-                        GetLastPoint()));
-                points[points.Count - 1].position.z = points[points.Count - 4].position.z;
-            }
-
-            GetComponent<MeshFilter>().sharedMesh = null;
-            Mesh newMesh = GenerateMeshUsingPrefab();
-            SetMesh(newMesh);
-        }
-
-        public void FindShortestPath()
-        {
-            if (startPointGO != null && endPointGO != null)
-            {
-                if (wireGenerated)
-                {
-                    wireGenerated = false;
-                    Reset();
-                    FindShortestPath();
-                }
-
-                //POINT 0
-                points[0].position = startPos;
-
-                //POINT 1
-                if(steps == 0)
-                    points[1].position = endPos;
-                //else
-                //    points[1].position = new Vector3(
-                //        endPos.x,
-                //        points[0].position.y,
-                //        points[0].position.z);
-
-                if (steps >= 1)
-                {
-                    //POINT 1
-                    points[1].position = new Vector3(
-                        endPos.x,
-                        startPos.y,
-                        endPos.z);
-                    //POINT 2
-                    if (startPos.y != endPos.y)
-                    {
-                        points.Add(new ControlPoint(endPos));
-                    }
-                }
-                if(steps >= 2)
-                {
-                    //POINT 1
-                    points[1].position = new Vector3(
-                        endPos.x,
-                        startPos.y,
-                        startPos.z);
-                    //POINT 2
-                    points[2].position = new Vector3(
-                        endPos.x,
-                        endPos.y,
-                        startPos.z);
-                    //POINT 3
-                    if (startPos.z != endPos.z)
-                    {
-                        points.Add(new ControlPoint(endPos));
-                    }
-                }
-                if(steps >= 3)
-                {
-                    //POINT 4
-                    points.Add(new ControlPoint(GetLastPoint()));
-                    points[3].position = points[2].position;
-                    points[2].position = points[1].position;
-                    points[1].position = new Vector3(
-                        points[0].position.x + Vector3.Distance(points[0].position,points[1].position)/2,
-                        points[1].position.y,
-                        points[1].position.z);
-                }
-                if(steps >= 4)
-                {
-                    //POINT 5
-                    points.Add(new ControlPoint(GetLastPoint()));
-                    points[4].position = points[3].position;
-                    points[3].position = new Vector3(
-                        points[3].position.x,
-                        points[2].position.y + Vector3.Distance(points[2].position, points[3].position) / 2,
-                        points[3].position.z);
-                }
-                if(steps == 5)
-                {
-                    //POINT 6
-                    points.Add(new ControlPoint(GetLastPoint()));
-                    points[5].position = new Vector3(
-                        points[4].position.x,
-                        points[4].position.y,
-                        points[4].position.z + Vector3.Distance(points[6].position, points[4].position) / 2);
-                }
-                wireGenerated = true;
-                GetComponent<MeshFilter>().sharedMesh = null;
-                Mesh newMesh = GenerateMeshUsingPrefab();
-                SetMesh(newMesh);
-            }
-            else
-            {
-                FindStartEnd();
-                FindPath();
-            }
-        }
         public void FindPath()
         {
             if (startPointGO != null && endPointGO != null)
@@ -460,148 +212,129 @@ namespace WireGeneratorPathfinding
                 {
                     wireGenerated = false;
                     Reset();
-                    FindPath();
                 }
 
                 startPos = startPointGO.transform.position;
                 endPos = endPointGO.transform.position;
+
+                float distanceX = endPos.x - startPos.x;
+                float distanceY = endPos.y - startPos.y;
+                float distanceZ = endPos.z - startPos.z;
+                
                 //POINT 0
                 points[0].position = startPointGO.transform.position;
 
-                //Finding the nearest wall from the starting point and setting the 2nd point 0.2f away from that wall
-                //POINT 1
-                points[1].position = FindClosestPoint(points[0].position);
+                if (distanceY > 0)
+                {
 
-                //Checking if there is an obstacle to the right of the 2nd point
-                var obstacle = CastRay(GetLastPoint(), Vector3.right);
-                if(obstacle.collider != null ) 
-                {
-                    //If there is an obstacle, find a way above or underneath it
-                    FoundObstacle(obstacle, Vector3.right);
-                }
-                
-                //POINT 2
-                //Create a new point as soon as there is no wall next to the wire
-                if(endPos.x != GetLastPoint().x)
-                    points.Add(
-                        new ControlPoint(
-                            NextPoint(
-                                endPos,
-                                points[1].position,
-                                Vector3.right,
-                                Vector3.forward,
-                                GetLastPointIndex())));
-
-                //Go in Z direction and check wether there's an obstacle in the way
-                obstacle = CastRay(GetLastPoint(), Vector3.forward);
-                if (obstacle.collider != null && obstacle.collider.gameObject.tag != "wall")
-                {
-                    //Debug.Log("Found an obstacle and it's called " + obstacle.collider.name);
-                    FoundObstacle(obstacle, Vector3.forward);
-                }
-                //Create a new point when the wall next to the wire ends or there's another wall in the way
-                //POINT 3
-                if (endPos.x != GetLastPoint().x)
-                {
-                    points.Add(
-                        new ControlPoint(
-                            NextPoint(
-                                CastRay(GetLastPoint(), Vector3.forward).point - 2*spacingZ,
-                                GetLastPoint(), 
-                                Vector3.forward,
-                                Vector3.left,
-                                GetLastPointIndex())));
-                }
-
-
-                //Repeat process on x axis for remaining distance
-                obstacle = CastRay(GetLastPoint(), Vector3.right);
-                if (obstacle.collider != null)
-                {
-                    FoundObstacle(obstacle, Vector3.right);
-                }
-                else
-                {
-                    if (endPos.x != GetLastPoint().x)
+                    var obstacle = CastRay(points[0].position, Vector3.up);
+                    if(obstacle.collider == null)
                     {
-                        points.Add(
-                        new ControlPoint(
-                            NextPoint(
-                                endPos,
-                                GetLastPoint(),
-                                Vector3.right,
-                                Vector3.forward,
-                                GetLastPointIndex())));
+                        //POINT 1 with no obstacle
+                        points[1].position = new Vector3(points[0].position.x,endPos.y,points[0].position.z);
+                        Debug.Log("no obstacle in y direction found");
+                    }
+                    else
+                    {
+                        //POINT 1 with obstacle
+                        points[1].position = new Vector3(points[0].position.x,obstacle.point.y,points[0].position.z)-spacingY;
+
+                        Vector3 center = obstacle.collider.bounds.center;
+                        float positiveDistance = Mathf.Abs(center.z + obstacle.collider.bounds.extents.z);
+                        float negativeDistance = Mathf.Abs(center.z - obstacle.collider.bounds.extents.z);
+
+                        //POINT 2
+                        if(positiveDistance < negativeDistance)
+                        {
+                            points.Add(new ControlPoint(GetLastPoint() + new Vector3(0, 0, positiveDistance) + spacingZ));
+                        }
+                        else
+                        {
+                            points.Add(new ControlPoint(GetLastPoint() - new Vector3(0, 0, negativeDistance) - spacingZ));
+                        }
+                        //POINT 3
+                        points.Add(new ControlPoint(GetLastPoint() + new Vector3(0,2*obstacle.collider.bounds.extents.y,0) + (2 * spacingY)));
+                        //POINT 4
+                        points.Add(new ControlPoint(new Vector3(GetLastPoint().x,GetLastPoint().y,endPos.z)));
                     }
 
                 }
-                //POINT 4
-                if (endPos.x != GetLastPoint().x)
+                else
                 {
-                    points.Add(
-                    new ControlPoint(
-                        new Vector3(
-                            endPos.x,GetLastPoint().y,GetLastPoint().z)));
+                    //TODO: endpoint is in front of the start point
                 }
 
-
-                //Check if the endpoint is higher or lower than the last created point
-                Vector3 upOrDown;
-                if (endPos.y > startPos.y)
+                if(distanceX > 0)
                 {
-                    upOrDown = Vector3.up;
+                    //TODO: endpoint is right of the start point
                 }
                 else
                 {
-                    upOrDown = Vector3.down;
-                }
-
-
-                //Check if there is an obstacle on the remaining distance on y-axis
-                obstacle = CastRay(GetLastPoint(), upOrDown);
-                if (obstacle.collider != null)
-                {
-                    FoundObstacle(obstacle, upOrDown);
-
-                    points.Add(
-                        new ControlPoint(
-                            GetLastPoint()));
-                    points[points.Count - 1].position.y = endPos.y;
-
-                    points.Add(
-                        new ControlPoint(
-                            GetLastPoint()));
-                    points[points.Count - 1].position.z = endPos.z+0.5f;
-                }
-                else
-                {
-                    if (endPos.y != GetLastPoint().y)
+                    var obstacle = CastRay(GetLastPoint(), Vector3.left);
+                    if (obstacle.collider == null)
                     {
-                        points.Add(
-                            new ControlPoint(
-                                new Vector3(
-                                    GetLastPoint().x,
-                                    endPos.y,
-                                    GetLastPoint().z)));
+                        //POINT 2 or 5 with no obstacle
+                        points.Add(new ControlPoint(new Vector3(endPos.x, GetLastPoint().y, GetLastPoint().z)));
+                        Debug.Log("no obstacle in x direction found");
                     }
-                    if(!noWalls)
-                        points.Add(
-                            new ControlPoint(
-                                new Vector3(
-                                    GetLastPoint().x,
-                                    GetLastPoint().y,
-                                    endPos.z+0.5f)));
+                    else
+                    {
+                        //POINT 2 or 5 with obstacle
+                        points.Add(new ControlPoint(new Vector3(obstacle.point.x, GetLastPoint().y, GetLastPoint().z) + spacingX));
+
+                        Vector3 center = obstacle.collider.bounds.center;
+
+                        //POINT 3 or 6
+                        points.Add(new ControlPoint(new Vector3(GetLastPoint().x,GetLastPoint().y + Mathf.Abs(center.y + obstacle.collider.bounds.extents.y), GetLastPoint().z)));
+                        //POINT 4 or 7
+                        points.Add(new ControlPoint(new Vector3(GetLastPoint().x - 2*obstacle.collider.bounds.extents.x,GetLastPoint().y,GetLastPoint().z)-2*spacingX));
+                        //POINT 5 or 8
+                        points.Add(new ControlPoint(new Vector3(GetLastPoint().x, points[GetLastPointIndex() - 2].position.y, GetLastPoint().z)));
+                    }
+                    //POINT 6 or 9
+                    points.Add(new ControlPoint(new Vector3(endPos.x, GetLastPoint().y, GetLastPoint().z)));
                 }
 
-                if (steps <= 2)
+                if (distanceY > 0)
                 {
-                    noWalls = true;
-                    Reset();
-                    FindShortestPath();
-                }
+                    var obstacle = CastRay(GetLastPoint(), Vector3.up);
+                    if (obstacle.collider == null)
+                    {
+                        //POINT 3 or 7 or 10 with no obstacle
+                        points.Add(new ControlPoint(endPos));
+                        Debug.Log("no obstacle in y direction found");
+                    }
+                    else
+                    {
+                        //POINT 3 or 7 or 10 with obstacle
+                        points.Add(new ControlPoint(new Vector3(GetLastPoint().x, obstacle.point.y, GetLastPoint().z) - spacingY));
+
+                        Vector3 center = obstacle.collider.bounds.center;
+                        float distanceCenterHit = center.z - obstacle.point.z;
+
+                        float distanceToBorder = Mathf.Abs(distanceCenterHit) - obstacle.collider.bounds.extents.z;
+
+                        //POINT 4 or 8 or 11
+                        if (distanceCenterHit<0)
+                        {
+                            Debug.Log("posDis bigger");
+                            points.Add(new ControlPoint(GetLastPoint() - new Vector3(0, 0, distanceToBorder) + spacingZ));
+                        }
+                        else
+                        {
+                            Debug.Log("negDis is bigger");
+                            points.Add(new ControlPoint(GetLastPoint() + new Vector3(0, 0, distanceToBorder) - spacingZ));
+                        }
+                        //POINT 5 or 9 or 12
+                        points.Add(new ControlPoint(GetLastPoint() + new Vector3(0, 2 * obstacle.collider.bounds.extents.y, 0) + (2 * spacingY)));
+                        //POINT 6 or 10 or 13
+                        points.Add(new ControlPoint(new Vector3(GetLastPoint().x, GetLastPoint().y, endPos.z)));
+                    }
+                    points.Add(new ControlPoint(endPos));
+                }          
 
                 wireGenerated = true;
-                GenerateMesh();
+                SetMesh(GenerateMeshUsingPrefab());
             }
             else
             {

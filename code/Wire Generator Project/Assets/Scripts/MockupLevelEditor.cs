@@ -77,7 +77,7 @@ public class MockupLevelEditor : MonoBehaviour
     {
         wire.gameObject.GetComponent<WireGeneratorPathfinding.WirePathfinding>().corners = (int)Corners.value;
         wire.gameObject.GetComponent<WireGeneratorPathfinding.WirePathfinding>().Reset();
-        wire.gameObject.GetComponent<WireGeneratorPathfinding.WirePathfinding>().FindShortestPath();
+        wire.gameObject.GetComponent<WireGeneratorPathfinding.WirePathfinding>().FindPath();
         //wire.gameObject.GetComponent<WireGenerator.WirePathfinding>().GenerateMesh();
     }
 }
