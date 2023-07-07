@@ -1,9 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using static WireGenerator.Wire;
+using static WireGeneratorPathfinding.WirePathfinding;
 
-namespace WireGenerator
+namespace WireGeneratorPathfinding
 {
     public class WireMesh
     {

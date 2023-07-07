@@ -53,6 +53,7 @@ MeshRenderer:
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: aca65228dbc456645a9fee3f221193b4, type: 2}
+  - {fileID: 2100000, guid: aca65228dbc456645a9fee3f221193b4, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -99,14 +100,16 @@ MonoBehaviour:
   points:
   - position: {x: 0, y: 0, z: 0}
   - position: {x: 1, y: 0, z: 0}
-  radius: 6
-  corners: 10
-  steps: 5
-  cornerPart: {fileID: 5703680357602356397, guid: f9836c028b502b6498840ae7a77976e5, type: 3}
-  pipePart: {fileID: 7748349742487384724, guid: b37430e73bfbbe346aa982d7c5bc801b, type: 3}
-  pipeParent: {fileID: 3592906386120692963}
+  radius: 0.06
+  corners: 8
+  straightMesh: {fileID: -6402532953415861574, guid: bec833abc16324d4087763bc166d22e4, type: 3}
+  sizePerStraightMesh: 0.28
+  numberPerStraightSegment: 3
+  curveSize: 0.08
+  curveMesh: {fileID: -6402532953415861574, guid: bec833abc16324d4087763bc166d22e4, type: 3}
+  straightPartMeshGenerationMode: 2
   startPointGO: {fileID: 0}
   endPointGO: {fileID: 0}
-  startPos: {x: -2, y: -2, z: -1}
-  endPos: {x: 2, y: 2, z: 3}
+  startPos: {x: 0, y: -1, z: 0}
+  endPos: {x: -3, y: 2, z: 1}
   wireGenerated: 0

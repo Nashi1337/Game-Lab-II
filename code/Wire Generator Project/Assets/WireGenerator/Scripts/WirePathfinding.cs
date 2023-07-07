@@ -484,7 +484,7 @@ namespace WireGeneratorPathfinding
 
                 float thisCurveSizePrev = Mathf.Min(curveSize, differencePrevious.magnitude / 2f);
                 float thisCurveSizeNext = Mathf.Min(curveSize, differenceNext.magnitude / 2f);
-                WireGenerator.WireMesh.DeformMeshUsingBezierCurve(mesh2, WireGenerator.WireMesh.Axis.Z, differencePrevious.normalized * thisCurveSizePrev, differencePrevious.normalized * thisCurveSizePrev / 2, differenceNext.normalized * thisCurveSizeNext / 2, differenceNext.normalized * thisCurveSizeNext);
+                WireGeneratorPathfinding.WireMesh.DeformMeshUsingBezierCurve(mesh2, WireGeneratorPathfinding.WireMesh.Axis.Z, differencePrevious.normalized * thisCurveSizePrev, differencePrevious.normalized * thisCurveSizePrev / 2, differenceNext.normalized * thisCurveSizeNext / 2, differenceNext.normalized * thisCurveSizeNext);
 
                 Matrix4x4 transformMatrix = Matrix4x4.TRS(position, Quaternion.identity/*rotation*/, Vector3.one/*scale*/);
 
