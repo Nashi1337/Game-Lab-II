@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 1469720421492758600}
   - component: {fileID: 1469720421492758603}
   - component: {fileID: 1469720421492758602}
+  - component: {fileID: 6989251788054801495}
   m_Layer: 0
   m_Name: StartPoint
   m_TagString: startPoint
@@ -81,3 +82,17 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &6989251788054801495
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1469720421492758612}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 490ac9868e8f2124f899277ebc04bf96, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  index: 1
+  invisibleOnPlay: 1

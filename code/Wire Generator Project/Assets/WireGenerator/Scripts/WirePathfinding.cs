@@ -53,14 +53,16 @@ namespace WireGeneratorPathfinding
         public GameObject startPointGO;
         [SerializeField]
         public GameObject endPointGO;
+        GameObject[] allStartPoints;
+        GameObject[] allEndPoints;
         public Vector3 startPos;
         public Vector3 endPos;
         GameObject generateStartPoint;
         GameObject generateEndPoint;
         public bool wireGenerated=false;
         private bool pointMoved = false;
-        bool noWalls;
-        bool useURP;
+
+        public int wireIndex=0;
 
         private void Awake()
         {
@@ -69,6 +71,10 @@ namespace WireGeneratorPathfinding
         }
         void Update()
         {
+            if (transform.position != Vector3.zero)
+            {
+                transform.position = Vector3.zero;
+            }
             if (wireGenerated)
             {
                 if (startPos != startPointGO.transform.position)
@@ -101,8 +107,8 @@ namespace WireGeneratorPathfinding
                         FindPath();
                     }
                 }
-            }
             startPos = startPointGO.transform.position;
+            }
         }
 
         float CalculateWireSag(float gravity, float t)
@@ -112,6 +118,9 @@ namespace WireGeneratorPathfinding
 
         public void Reset()
         {
+            wireGenerated = false;
+            this.transform.position = Vector3.zero;
+
             if (GraphicsSettings.renderPipelineAsset != null)
             {
                 Material blueURP = AssetDatabase.LoadAssetAtPath<Material>("Assets/WireGenerator/Materials/blueURP.mat");
@@ -121,8 +130,8 @@ namespace WireGeneratorPathfinding
                 AssetDatabase.LoadAssetAtPath<GameObject>("Assets/WireGenerator/Prefabs/EndPoint.prefab").GetComponent<MeshRenderer>().material = redURP;
                 AssetDatabase.LoadAssetAtPath<GameObject>("Assets/WireGenerator/Prefabs/Wire.prefab").GetComponent<MeshRenderer>().sharedMaterials[0] = blackURP;
                 AssetDatabase.LoadAssetAtPath<GameObject>("Assets/WireGenerator/Prefabs/Wire.prefab").GetComponent<MeshRenderer>().sharedMaterials[1] = blackURP;
-                GameObject.FindWithTag("startPoint").gameObject.GetComponent<MeshRenderer>().sharedMaterial = blueURP;
-                GameObject.FindWithTag("endPoint").gameObject.GetComponent<MeshRenderer>().sharedMaterial = redURP;
+                //GameObject.FindWithTag("startPoint" + index.ToString()).gameObject.GetComponent<MeshRenderer>().sharedMaterial = blueURP;
+                //GameObject.FindWithTag("endPoint" + index.ToString()).gameObject.GetComponent<MeshRenderer>().sharedMaterial = redURP;
                 Material[] wireMaterials = this.GetComponent<MeshRenderer>().sharedMaterials;
                 wireMaterials[0] = blackURP;
                 wireMaterials[1] = blackURP;
@@ -139,7 +148,6 @@ namespace WireGeneratorPathfinding
             }
             startPos = startPointGO.transform.position;
             endPos = endPointGO.transform.position;
-            wireGenerated = false;
             points = new List<ControlPoint>() { new ControlPoint(new Vector3(0, 0, 0)), new ControlPoint(new Vector3(1, 0, 0)) };
 
             mesh = new Mesh{name = "Wire"};
@@ -152,14 +160,30 @@ namespace WireGeneratorPathfinding
         }
         public void FindStartEnd()
         {
-            startPointGO = GameObject.FindGameObjectWithTag("startPoint");
-            endPointGO = GameObject.FindGameObjectWithTag("endPoint");
+            startPointGO = null;
+            endPointGO = null;
+            allStartPoints = GameObject.FindGameObjectsWithTag("startPoint");
+            allEndPoints = GameObject.FindGameObjectsWithTag("endPoint");
+            foreach(GameObject startPoint in allStartPoints)
+            {
+                if(startPoint.GetComponent<WireStartEnd>().index == wireIndex)
+                {
+                    startPointGO = startPoint;
+                }
+            }
+            foreach(GameObject endPoint in allEndPoints)
+            {
+                if(endPoint.GetComponent<WireStartEnd>().index == wireIndex)
+                {
+                    endPointGO = endPoint;
+                }
+            }
         }
 
-        public RaycastHit CastRay(Vector3 start, Vector3 direction)
+        public RaycastHit CastRay(Vector3 start, Vector3 direction, float distance)
         {
             Ray ray = new Ray(transform.TransformPoint(start), transform.TransformPoint(direction));
-            Physics.Raycast(ray, out RaycastHit hitData, Mathf.Infinity);
+            Physics.Raycast(ray, out RaycastHit hitData, distance);
             return hitData;
         }
         public Vector3 FindClosestPoint(Vector3 origin)
@@ -198,12 +222,10 @@ namespace WireGeneratorPathfinding
             if (bestDistance == Mathf.Infinity)
             {
                 Debug.Log("I think there is no wall anywhere :(");
-                noWalls = true;
                 return endPos;
             }
             else
             {
-                noWalls = false;
                 return new Vector3(
                     //Mathf.Round
                     (closestPoint.x),
@@ -233,6 +255,8 @@ namespace WireGeneratorPathfinding
                     Reset();
                 }
 
+                FindStartEnd();
+
                 startPos = startPointGO.transform.position;
                 endPos = endPointGO.transform.position;
 
@@ -246,7 +270,7 @@ namespace WireGeneratorPathfinding
                 if (distanceY > 0)
                 {
 
-                    var obstacle = CastRay(points[0].position, Vector3.up);
+                    var obstacle = CastRay(points[0].position, Vector3.up,Mathf.Abs(endPos.y)-GetLastPoint().y);
                     if(obstacle.collider == null)
                     {
                         //POINT 1 with no obstacle
@@ -283,10 +307,9 @@ namespace WireGeneratorPathfinding
                     //if there is no difference on y axis, delete last point. then new points will be created
                     points.Remove(points[GetLastPointIndex()]);
                 }
-                Debug.Log(distanceX);
                 if(distanceX > 0)
                 {
-                    var obstacle = CastRay(GetLastPoint(), Vector3.right);
+                    var obstacle = CastRay(GetLastPoint(), Vector3.right,Mathf.Abs(endPos.x)-GetLastPoint().x);
                     if (obstacle.collider == null)
                     {
                         //POINT 2 or 5 with no obstacle
@@ -299,23 +322,29 @@ namespace WireGeneratorPathfinding
                         points.Add(new ControlPoint(new Vector3(obstacle.point.x, GetLastPoint().y, GetLastPoint().z) - spacingX));
 
                         Vector3 center = obstacle.collider.bounds.center;
-                        float distanceCenterHit = center.y - obstacle.point.y;
+                        float distanceCenterHitUp = center.y - obstacle.point.y;
+                        float distanceCenterHitForward = center.z - obstacle.point.z;
 
-                        float distanceToBorder = Mathf.Abs(distanceCenterHit) + obstacle.collider.bounds.extents.y;
+                        float distanceToBorderUp = Mathf.Abs(distanceCenterHitUp) + obstacle.collider.bounds.extents.y;
+                        float distanceToBorderForward = Mathf.Abs(distanceCenterHitForward) + obstacle.collider.bounds.extents.z;
 
-                        //POINT 3 or 6
-                        points.Add(new ControlPoint(new Vector3(GetLastPoint().x, GetLastPoint().y + distanceToBorder, GetLastPoint().z)));
-                        //POINT 4 or 7
+                        if(distanceToBorderUp < distanceToBorderForward)
+                        {
+                            points.Add(new ControlPoint(new Vector3(GetLastPoint().x, GetLastPoint().y + distanceToBorderUp, GetLastPoint().z)));
+                        }
+                        else
+                        {
+                            points.Add(new ControlPoint(new Vector3(GetLastPoint().x, GetLastPoint().y, GetLastPoint().z - distanceToBorderForward)));
+                        }
                         points.Add(new ControlPoint(new Vector3(GetLastPoint().x + 2 * obstacle.collider.bounds.extents.x, GetLastPoint().y, GetLastPoint().z) + 2 * spacingX));
-                        //POINT 5 or 8
-                        points.Add(new ControlPoint(new Vector3(GetLastPoint().x, points[GetLastPointIndex() - 2].position.y, GetLastPoint().z)));
+                        points.Add(new ControlPoint(new Vector3(GetLastPoint().x, GetLastPoint().y, endPos.z)));
                     }
                     //POINT 6 or 9
                     points.Add(new ControlPoint(new Vector3(endPos.x, GetLastPoint().y, GetLastPoint().z)));
                 }
                 else
                 {
-                    var obstacle = CastRay(GetLastPoint(), Vector3.left);
+                    var obstacle = CastRay(GetLastPoint(), Vector3.left,Mathf.Abs(endPos.x)-GetLastPoint().x);
                     if (obstacle.collider == null)
                     {
                         //POINT 2 or 5 with no obstacle
@@ -342,7 +371,7 @@ namespace WireGeneratorPathfinding
 
                 if (distanceY > 0)
                 {
-                    var obstacle = CastRay(GetLastPoint(), Vector3.up);
+                    var obstacle = CastRay(GetLastPoint(), Vector3.up,Mathf.Abs(endPos.y)-GetLastPoint().y);
                     if (obstacle.collider == null)
                     {
                         //POINT 3 or 7 or 10 with no obstacle

@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 5019606349736228071}
   - component: {fileID: 5019606349736228070}
   - component: {fileID: 5019606349736228069}
+  - component: {fileID: 6827117306161441072}
   m_Layer: 0
   m_Name: EndPoint
   m_TagString: endPoint
@@ -81,3 +82,17 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &6827117306161441072
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5019606349736228067}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 490ac9868e8f2124f899277ebc04bf96, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  index: 1
+  invisibleOnPlay: 1

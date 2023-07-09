@@ -22,15 +22,10 @@ namespace WireGeneratorPathfinding
         SerializedProperty straightPartMeshGenerationMode;
         SerializedProperty curveSize;
 
-        SerializedProperty cornerPart;
-        SerializedProperty pipePart;
         SerializedProperty startPointGO;
         SerializedProperty endPointGO;
-        GameObject startPoint;
-        GameObject endPoint;
 
-
-        bool showWire;
+        SerializedProperty wireIndex;
 
         private void UndoCallbackGenerateMesh()
         {
@@ -58,12 +53,8 @@ namespace WireGeneratorPathfinding
 
             startPointGO = serializedObject.FindProperty("startPointGO");
             endPointGO = serializedObject.FindProperty("endPointGO");
-            startPoint = startPointGO.serializedObject.targetObject as GameObject;
-            endPoint = endPointGO.serializedObject.targetObject as GameObject;
 
-
-
-            showWire = true;
+            wireIndex = serializedObject.FindProperty("wireIndex");
 
             Undo.undoRedoPerformed += UndoCallbackGenerateMesh;
         }
@@ -93,48 +84,46 @@ namespace WireGeneratorPathfinding
             {
                 Debug.Log("something changed");
             }
-
         }
         public override void OnInspectorGUI()
         {
             WirePathfinding wire = target as WirePathfinding;
 
             EditorGUILayout.LabelField("Select the Wire Tool in the toolbar to edit control points in Scene View");
-            showWire = EditorGUILayout.Toggle("Show wire", showWire);
             EditorGUI.BeginChangeCheck();
 
-            if(GUILayout.Button("Find Start and End Points"))
-            {
-                Undo.RecordObject(wire, "Find Start and End Points");
-                wire.FindStartEnd();
-            }
+            //if(GUILayout.Button("Find Start and End Points"))
+            //{
+            //    Undo.RecordObject(wire, "Find Start and End Points");
+            //    wire.FindStartEnd();
+            //}
 
-            if(GUILayout.Button("Find Path Along Wall"))
+            if(GUILayout.Button("Create Pipe"))
             {
                 Undo.RecordObject(wire, "Find Path Along Wall");
                 wire.FindPath();
             }
 
-            if (GUILayout.Button("Generate Mesh (Trucy)"))
-            {
-                Undo.IncrementCurrentGroup();
-                Mesh sharedMesh = wire.GetComponent<MeshFilter>().sharedMesh;
-                try
-                {
-                    Undo.DestroyObjectImmediate(sharedMesh);
-                }
-                catch (ArgumentNullException)
-                {
+            //if (GUILayout.Button("Generate Mesh (Trucy)"))
+            //{
+            //    Undo.IncrementCurrentGroup();
+            //    Mesh sharedMesh = wire.GetComponent<MeshFilter>().sharedMesh;
+            //    try
+            //    {
+            //        Undo.DestroyObjectImmediate(sharedMesh);
+            //    }
+            //    catch (ArgumentNullException)
+            //    {
 
-                }
-                Undo.RecordObject(wire.GetComponent<MeshFilter>(), "Remove mesh from mesh filter");
-                wire.GetComponent<MeshFilter>().sharedMesh = null;
-                Mesh newMesh = wire.GenerateMeshUsingPrefab();
-                Undo.RegisterCreatedObjectUndo(newMesh, "Create Mesh");
-                Undo.RecordObject(wire, "Change Mesh");
-                wire.SetMesh(newMesh);  
-                Undo.SetCurrentGroupName("Generate Mesh");
-            }
+            //    }
+            //    Undo.RecordObject(wire.GetComponent<MeshFilter>(), "Remove mesh from mesh filter");
+            //    wire.GetComponent<MeshFilter>().sharedMesh = null;
+            //    Mesh newMesh = wire.GenerateMeshUsingPrefab();
+            //    Undo.RegisterCreatedObjectUndo(newMesh, "Create Mesh");
+            //    Undo.RecordObject(wire, "Change Mesh");
+            //    wire.SetMesh(newMesh);  
+            //    Undo.SetCurrentGroupName("Generate Mesh");
+            //}
 
             if (GUILayout.Button("Reset"))
             {
@@ -143,9 +132,9 @@ namespace WireGeneratorPathfinding
             }
 
 
-            wire.ShowWire(showWire);
-
             EditorGUILayout.PropertyField(points);
+            EditorGUILayout.PropertyField(startPointGO);
+            EditorGUILayout.PropertyField(endPointGO);
             EditorGUILayout.PropertyField(radius);
             EditorGUILayout.PropertyField(corners);
             EditorGUILayout.PropertyField(straightMesh);
@@ -154,10 +143,9 @@ namespace WireGeneratorPathfinding
             EditorGUILayout.PropertyField(numberPerStraightSegment);
             EditorGUILayout.PropertyField(straightPartMeshGenerationMode);
             EditorGUILayout.PropertyField(curveSize);
-
+            EditorGUILayout.PropertyField(wireIndex);
 
             if (EditorGUI.EndChangeCheck()) {
-                wire.ShowWire(showWire);
                 serializedObject.ApplyModifiedProperties();
 
                 Undo.RecordObject(wire.GetComponent<MeshFilter>(), "Remove mesh from mesh filter");
@@ -167,7 +155,6 @@ namespace WireGeneratorPathfinding
                 Undo.RecordObject(wire, "Change Mesh");
                 wire.SetMesh(newMesh);
                 Undo.SetCurrentGroupName("Generate Mesh");
-                //wire.GenerateMesh();
             }
         }
     }
@@ -175,9 +162,17 @@ namespace WireGeneratorPathfinding
     [EditorTool("Wire Tool", typeof(WirePathfinding))]
     class WireTool: EditorTool, IDrawSelectedHandles
     {
+
         public override void OnToolGUI(EditorWindow window)
         {
             WirePathfinding wire = target as WirePathfinding;
+            Handles.BeginGUI();
+            Rect buttonRect = new Rect(SceneView.lastActiveSceneView.position.width-150f, SceneView.lastActiveSceneView.position.height-150f, 130f, 30f);
+            if (GUI.Button(buttonRect, "Create Pipe"))
+            {
+                wire.FindPath();
+            }
+            Handles.EndGUI();
             EditorGUI.BeginChangeCheck();
             for (int i = 0; i < wire.points.Count;i++)
             {
