@@ -69,15 +69,15 @@ public class MockupLevelEditor : MonoBehaviour
 
     public void HideWire()
     {
-        wire.gameObject.GetComponent<WireGeneratorPathfinding.WirePathfinding>().ShowWire(showWire);
+        wire.gameObject.GetComponent<WireGenerator.Wire>().ShowWire(showWire);
         showWire = !showWire;
     }
 
     public void SetCorners()
     {
-        wire.gameObject.GetComponent<WireGeneratorPathfinding.WirePathfinding>().corners = (int)Corners.value;
-        wire.gameObject.GetComponent<WireGeneratorPathfinding.WirePathfinding>().Reset();
-        wire.gameObject.GetComponent<WireGeneratorPathfinding.WirePathfinding>().FindPath();
+        wire.gameObject.GetComponent<WireGenerator.Wire>().corners = (int)Corners.value;
+        wire.gameObject.GetComponent<WireGenerator.Wire>().Reset();
+        wire.gameObject.GetComponent<WireGenerator.Wire>().FindPath();
         //wire.gameObject.GetComponent<WireGenerator.WirePathfinding>().GenerateMesh();
     }
 }

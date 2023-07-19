@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 3592906386120692960}
   - component: {fileID: 3592906386120692961}
   - component: {fileID: 3592906386120692962}
+  - component: {fileID: 2270715709651855182}
   m_Layer: 0
   m_Name: Wire
   m_TagString: wire
@@ -100,7 +101,7 @@ MonoBehaviour:
   points:
   - position: {x: 0, y: 0, z: 0}
   - position: {x: 1, y: 0, z: 0}
-  radius: 0.06
+  radius: 6
   corners: 8
   straightMesh: {fileID: -6402532953415861574, guid: bec833abc16324d4087763bc166d22e4, type: 3}
   sizePerStraightMesh: 0.28
@@ -110,6 +111,25 @@ MonoBehaviour:
   straightPartMeshGenerationMode: 2
   startPointGO: {fileID: 0}
   endPointGO: {fileID: 0}
+  wireMaterial: {fileID: 0}
+  cornerMaterial: {fileID: 0}
   startPos: {x: 0, y: -1, z: 0}
   endPos: {x: -3, y: 2, z: 1}
   wireGenerated: 0
+  wireIndex: 1
+--- !u!114 &2270715709651855182
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3592906386120692963}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6cc684c9bcc420b42beb5c92dab06a89, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  agent: {fileID: 0}
+  moveSpeed: 5
+  playAnimation: 0
+  mode: 0

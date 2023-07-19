@@ -5,10 +5,10 @@ using System.Linq;
 using System;
 using UnityEditor.SceneManagement;
 
-namespace WireGeneratorPathfinding
+namespace WireGenerator
 {
-    [CustomEditor(typeof(WirePathfinding))]
-    public class WireEditorPathfinding : Editor
+    [CustomEditor(typeof(Wire))]
+    public class WireEditor : Editor
     {
         SerializedProperty radius;
         SerializedProperty corners;
@@ -24,13 +24,15 @@ namespace WireGeneratorPathfinding
 
         SerializedProperty startPointGO;
         SerializedProperty endPointGO;
+        SerializedProperty wireMat;
+        SerializedProperty cornerMat;
 
         SerializedProperty wireIndex;
 
         private void UndoCallbackGenerateMesh()
         {
             //Refreshes MeshRenderer visual state, not sure if there is an easier way to do it
-            WirePathfinding wire = target as WirePathfinding;
+            Wire wire = target as Wire;
 
             MeshFilter meshFilter = wire.GetComponent<MeshFilter>();
             Mesh sharedMesh = meshFilter.sharedMesh;
@@ -54,6 +56,9 @@ namespace WireGeneratorPathfinding
             startPointGO = serializedObject.FindProperty("startPointGO");
             endPointGO = serializedObject.FindProperty("endPointGO");
 
+            wireMat = serializedObject.FindProperty("wireMaterial");
+            cornerMat = serializedObject.FindProperty("cornerMaterial");
+
             wireIndex = serializedObject.FindProperty("wireIndex");
 
             Undo.undoRedoPerformed += UndoCallbackGenerateMesh;
@@ -66,7 +71,7 @@ namespace WireGeneratorPathfinding
 
         public void OnSceneGUI()
         {
-            WirePathfinding wire = target as WirePathfinding;
+            Wire wire = target as Wire;
             Handles.color = new Color(1.00f, 0.498f, 0.314f);
             for (int i = 0; i < wire.points.Count;i++)
             {
@@ -76,54 +81,19 @@ namespace WireGeneratorPathfinding
                 }
                 Handles.SphereHandleCap(0, wire.GetPosition(i), Quaternion.identity, 0.1f, EventType.Repaint);
             }
-
-            EditorGUI.BeginChangeCheck();
-            EditorGUILayout.PropertyField(startPointGO);
-            EditorGUILayout.PropertyField(endPointGO);
-            if (EditorGUI.EndChangeCheck())
-            {
-                Debug.Log("something changed");
-            }
         }
         public override void OnInspectorGUI()
         {
-            WirePathfinding wire = target as WirePathfinding;
+            Wire wire = target as Wire;
 
             EditorGUILayout.LabelField("Select the Wire Tool in the toolbar to edit control points in Scene View");
             EditorGUI.BeginChangeCheck();
 
-            //if(GUILayout.Button("Find Start and End Points"))
-            //{
-            //    Undo.RecordObject(wire, "Find Start and End Points");
-            //    wire.FindStartEnd();
-            //}
-
-            if(GUILayout.Button("Create Pipe"))
+            if(GUILayout.Button("Create Wire"))
             {
-                Undo.RecordObject(wire, "Find Path Along Wall");
+                Undo.RecordObject(wire, "Find Path");
                 wire.FindPath();
             }
-
-            //if (GUILayout.Button("Generate Mesh (Trucy)"))
-            //{
-            //    Undo.IncrementCurrentGroup();
-            //    Mesh sharedMesh = wire.GetComponent<MeshFilter>().sharedMesh;
-            //    try
-            //    {
-            //        Undo.DestroyObjectImmediate(sharedMesh);
-            //    }
-            //    catch (ArgumentNullException)
-            //    {
-
-            //    }
-            //    Undo.RecordObject(wire.GetComponent<MeshFilter>(), "Remove mesh from mesh filter");
-            //    wire.GetComponent<MeshFilter>().sharedMesh = null;
-            //    Mesh newMesh = wire.GenerateMeshUsingPrefab();
-            //    Undo.RegisterCreatedObjectUndo(newMesh, "Create Mesh");
-            //    Undo.RecordObject(wire, "Change Mesh");
-            //    wire.SetMesh(newMesh);  
-            //    Undo.SetCurrentGroupName("Generate Mesh");
-            //}
 
             if (GUILayout.Button("Reset"))
             {
@@ -135,6 +105,8 @@ namespace WireGeneratorPathfinding
             EditorGUILayout.PropertyField(points);
             EditorGUILayout.PropertyField(startPointGO);
             EditorGUILayout.PropertyField(endPointGO);
+            EditorGUILayout.PropertyField(wireMat);
+            EditorGUILayout.PropertyField(cornerMat);
             EditorGUILayout.PropertyField(radius);
             EditorGUILayout.PropertyField(corners);
             EditorGUILayout.PropertyField(straightMesh);
@@ -159,16 +131,16 @@ namespace WireGeneratorPathfinding
         }
     }
 
-    [EditorTool("Wire Tool", typeof(WirePathfinding))]
+    [EditorTool("Wire Tool", typeof(Wire))]
     class WireTool: EditorTool, IDrawSelectedHandles
     {
 
         public override void OnToolGUI(EditorWindow window)
         {
-            WirePathfinding wire = target as WirePathfinding;
+            Wire wire = target as Wire;
             Handles.BeginGUI();
             Rect buttonRect = new Rect(SceneView.lastActiveSceneView.position.width-150f, SceneView.lastActiveSceneView.position.height-150f, 130f, 30f);
-            if (GUI.Button(buttonRect, "Create Pipe"))
+            if (GUI.Button(buttonRect, "Create Wire"))
             {
                 wire.FindPath();
             }
@@ -188,7 +160,6 @@ namespace WireGeneratorPathfinding
                 Undo.RecordObject(wire, "Change Mesh");
                 wire.SetMesh(newMesh);
                 Undo.SetCurrentGroupName("Generate Mesh");
-                //wire.GenerateMesh();
             }
         }
 
