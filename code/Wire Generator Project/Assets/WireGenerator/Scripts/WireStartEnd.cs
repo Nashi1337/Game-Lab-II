@@ -9,6 +9,7 @@ public class WireStartEnd : MonoBehaviour
     public bool invisibleOnPlay;
     private void Start()
     {
+        //makes start and end point invisible upon play because no one wants to see 
         if (Application.isPlaying&&invisibleOnPlay)
         {
             gameObject.GetComponent<MeshRenderer>().enabled = false;

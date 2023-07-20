@@ -14,6 +14,9 @@ namespace WireGenerator
     [RequireComponent(typeof(MeshFilter))]
     public class Wire : MonoBehaviour
     {
+        /// <summary>
+        /// Each point of the points list is derived from the ControlPoint class
+        /// </summary>
         [Serializable]
         public class ControlPoint
         {
@@ -23,20 +26,15 @@ namespace WireGenerator
             }
         }
 
+        //spacing vectors for obstacle circumvention for padding
         Vector3 spacingZ = new Vector3(0, 0, 0.19f);
         Vector3 spacingY = new Vector3(0, 0.19f, 0);
         Vector3 spacingX = new Vector3(0.19f, 0, 0);
 
-        [SerializeField]
-        float weight = 1f;
-        [SerializeField]
-        float sagOffset = 0f;
-
-        Mesh mesh;
         MeshFilter meshFilter;
+        //Initialize the points list with two points for better visibility
         public List<ControlPoint> points = new List<ControlPoint>() { new ControlPoint(new Vector3(0,0,0)), new ControlPoint(new Vector3(1, 0, 0))};
         public float radius=6f;
-        public int corners=6;
 
         //Assumes mesh for straight parts is aligned with z-Axis
         [SerializeField] private Mesh straightMesh;
@@ -48,14 +46,12 @@ namespace WireGenerator
 
         [SerializeField] StraightPartMeshGenerationMode straightPartMeshGenerationMode = StraightPartMeshGenerationMode.RoundAndScaleLast;
 
+        //in case start and endpoint cannot be found, the user can manually assign them
         [SerializeField]
         public GameObject startPointGO;
         [SerializeField]
         public GameObject endPointGO;
-        [SerializeField]
-        public Material wireMaterial;
-        [SerializeField]
-        public Material cornerMaterial;
+
         GameObject[] allStartPoints;
         GameObject[] allEndPoints;
         public Vector3 startPos;
@@ -66,7 +62,10 @@ namespace WireGenerator
         private bool pointMoved = false;
         public int wireIndex=0;
 
-
+        /// <summary>
+        /// When the script is loaded it searches the scene for all Wire objects and adjusts it's own index so that it is n+1.
+        /// Then if start and end are children of the wire it sets their index to the same as the wire
+        /// </summary>
         private void Awake()
         {
             Wire[] allWires = FindObjectsOfType<Wire>();
@@ -74,8 +73,11 @@ namespace WireGenerator
             {
                 if (wire.wireIndex == wireIndex)
                 {
-                    wire.wireIndex = wireIndex;
-                    wireIndex++;
+                    if (wire != this)
+                    {
+                        wire.wireIndex = wireIndex;
+                        wireIndex++;
+                    }
                 }
             }
             if (gameObject.transform.childCount > 0)
@@ -88,6 +90,13 @@ namespace WireGenerator
                 FindPath();
             }
         }
+
+        /// <summary>
+        /// The Update Method checks every frame update, if the start or endpoint was moved.
+        /// If yes, it immediately recalculates the path and generates the mesh.
+        /// The result is a smooth user experience.
+        /// Since we enabled "ExecuteInEditMode" it also works in the scene view.
+        /// </summary>
         void Update()
         {
             if (transform.position != Vector3.zero)
@@ -130,6 +139,10 @@ namespace WireGenerator
             }
         }
 
+        /// <summary>
+        /// Our custom Reset method keeps fixed information and reinitializes other information.
+        /// It also empties the Control Point list.
+        /// </summary>
         public void Reset()
         {
             wireGenerated = false;
@@ -152,11 +165,14 @@ namespace WireGenerator
             endPos = endPointGO.transform.position;
             points = new List<ControlPoint>() { new ControlPoint(new Vector3(0, 0, 0)), new ControlPoint(new Vector3(1, 0, 0)) };
 
-            mesh = new Mesh{name = "Wire"};
             meshFilter=GetComponent<MeshFilter>();
 
             SetMesh(GenerateMeshUsingPrefab());
         }
+
+        /// <summary>
+        /// Searches the scene for all start and end points, then keeps a reference to the ones with the same index as the wire.
+        /// </summary>
         public void FindStartEnd()
         {
             startPointGO = null;
@@ -189,27 +205,49 @@ namespace WireGenerator
             }
         }
 
+        /// <summary>
+        /// Custom RayCast method that shoots a ray only a given distance
+        /// </summary>
+        /// <param name="start">Origin of the ray</param>
+        /// <param name="direction">Direction of where the ray is going</param>
+        /// <param name="distance">max distance how far the ray should be cast</param>
+        /// <returns></returns>
         public RaycastHit CastRay(Vector3 start, Vector3 direction, float distance)
         {
             Ray ray = new Ray(transform.TransformPoint(start), transform.TransformPoint(direction));
             Physics.Raycast(ray, out RaycastHit hitData, distance);
             return hitData;
         }
+        /// <summary>
+        /// Returns the position of the last point added to the list
+        /// </summary>
+        /// <returns>Vector3 of the last point</returns>
         Vector3 GetLastPoint()
         {
             return points[points.Count-1].position;
         }
 
+        /// <summary>
+        /// Returns the index of the last point added to the list
+        /// </summary>
+        /// <returns>int that is the length of the points list -1</returns>
         int GetLastPointIndex()
         {
             return points.Count-1;
         }
 
+        /// <summary>
+        /// Pathfinding function of the wire. Is executed automatically or manually by button press
+        /// </summary>
         public void FindPath()
         {
+            //reinitialize start and end
             FindStartEnd();
+
+            //only execute if the wire has a start and end
             if (startPointGO != null && endPointGO != null)
             {
+                //if the wire was already generated, reset it first before proceeding (prevents creating duplicate control points)
                 if (wireGenerated)
                 {
                     wireGenerated = false;
@@ -219,37 +257,50 @@ namespace WireGenerator
                 startPos = startPointGO.transform.position;
                 endPos = endPointGO.transform.position;
 
+                //remaining distances between start and end
                 float distanceX = endPos.x - startPos.x;
                 float distanceY = endPos.y - startPos.y;
                 float distanceZ = endPos.z - startPos.z;
 
+                //the first point of the list is always inside the startPoint object
                 points[0].position = startPointGO.transform.position;
 
+                //first check the distance on Y axis. Is the end point above, below or on the same level as the start point?
                 if (distanceY > 0)
                 {
+                    //check if there is an obstacle on the Y axis between start and end
                     var obstacle = CastRay(points[0].position, Vector3.up, endPos.y - points[0].position.y);
                     if (obstacle.collider == null)
                     {
+                        //if not, just set the second point in the list which already exists to y=endPos.y
                         points[1].position = new Vector3(points[0].position.x, endPos.y, points[0].position.z);
                     }
                     else
                     {
+                        //if there is an obstacle, set the second point shortly before the obstacle
                         points[1].position = new Vector3(points[0].position.x, obstacle.point.y, points[0].position.z) - spacingY;
 
                         Vector3 center = obstacle.collider.bounds.center;
-                        float positiveDistance = Mathf.Abs(center.z + obstacle.collider.bounds.extents.z);
-                        float negativeDistance = Mathf.Abs(center.z - obstacle.collider.bounds.extents.z);
 
-                        if (positiveDistance < negativeDistance)
+                        //calculate the distance from the center of the obstacle to the point where the ray hit
+                        float distanceCenterHit = center.z - obstacle.point.z;
+
+                        //calculate the distance to the next border
+                        float distanceToBorder = Mathf.Abs(distanceCenterHit) - obstacle.collider.bounds.extents.z;
+
+                        //if the distance is negative, the next point will be created in front of the obstacle. Otherwise in the front
+                        if (distanceCenterHit < 0)
                         {
-                            points.Add(new ControlPoint(GetLastPoint() + new Vector3(0, 0, positiveDistance) + spacingZ));
+                            points.Add(new ControlPoint(GetLastPoint() - new Vector3(0, 0, distanceToBorder) + spacingZ));
                         }
                         else
                         {
-                            points.Add(new ControlPoint(GetLastPoint() - new Vector3(0, 0, negativeDistance) - spacingZ));
+                            points.Add(new ControlPoint(GetLastPoint() + new Vector3(0, 0, distanceToBorder) - spacingZ));
                         }
+                        //the next point will be created above the obstacle
                         points.Add(new ControlPoint(GetLastPoint() + new Vector3(0, 2 * obstacle.collider.bounds.extents.y, 0) + (2 * spacingY)));
 
+                        //this point then hast the same z-coordinate than two points prior, before the obstacle
                         points.Add(new ControlPoint(new Vector3(GetLastPoint().x, GetLastPoint().y, points[GetLastPointIndex() - 2].position.z)));
                     }
                 }
@@ -258,6 +309,7 @@ namespace WireGenerator
                     //if there is no difference on y axis, delete last point. then new points will be created
                     points.Remove(points[GetLastPointIndex()]);
                 }
+                //repeat same process for X-Axis
                 if(distanceX > 0)
                 {
                     var obstacle = CastRay(GetLastPoint(), Vector3.right,Mathf.Abs(endPos.x)-GetLastPoint().x);
@@ -287,6 +339,7 @@ namespace WireGenerator
                     }
                     points.Add(new ControlPoint(new Vector3(endPos.x, GetLastPoint().y, GetLastPoint().z)));
                 }
+                //if the end point is to the left of the start point, this will be executed
                 else if(distanceX < 0)
                 {
                     var obstacle = CastRay(GetLastPoint(), Vector3.left,Mathf.Abs(endPos.x-GetLastPoint().x));
@@ -318,6 +371,7 @@ namespace WireGenerator
                     points.Add(new ControlPoint(new Vector3(endPos.x, GetLastPoint().y, GetLastPoint().z)));
                 }
 
+                //next comes the z-axis
                 if (distanceZ > 0)
                 {
                     var obstacle = CastRay(GetLastPoint(), Vector3.forward, Mathf.Abs(endPos.z) + Mathf.Abs(GetLastPoint().z));
@@ -364,7 +418,7 @@ namespace WireGenerator
                     }
                     points.Add(new ControlPoint(new Vector3(endPos.x, GetLastPoint().y, endPos.z)));
                 }
-
+                //update the remaining distance on the y-axis
                 distanceY = endPos.y - GetLastPoint().y;
 
                 if (distanceY > 0)
@@ -427,6 +481,7 @@ namespace WireGenerator
                 }
 
                 wireGenerated = true;
+                //when all points are created, the mesh will be generated
                 SetMesh(GenerateMeshUsingPrefab());
             }
             else
@@ -435,6 +490,10 @@ namespace WireGenerator
             }
         }
 
+        /// <summary>
+        /// sets the mesh of the wire object to the generated mesh
+        /// </summary>
+        /// <param name="mesh"></param>
         public void SetMesh(Mesh mesh)
         {
             meshFilter = GetComponent<MeshFilter>();
@@ -590,130 +649,42 @@ namespace WireGenerator
             return combineInstances;
         }
 
-
-
-
+        /// <summary>
+        /// returns the position of a given point from the list
+        /// </summary>
+        /// <param name="i">index of desired point</param>
+        /// <returns>position of point from list</returns>
         public Vector3 GetPosition(int i) {
             return (transform.position + points[i].position);
         }
+
+        /// <summary>
+        /// updates the position of a given point
+        /// </summary>
+        /// <param name="i">index of desired point</param>
+        /// <param name="position">new position of given point</param>
         public void SetPosition(int i, Vector3 position)
         {
             points[i].position = position - transform.position;
         }
 
-        public void GenerateMesh()
-        {
-            var tempVertices = new Vector3[corners * points.Count];
-            var tempNormals = new Vector3[corners * points.Count];
-
-            for (int controlPointId = 0; controlPointId < points.Count; controlPointId++)
-            {
-
-                //calculate vector from one end to the other
-                Vector3 tangent;
-
-                if (controlPointId == 0) {
-                    tangent = -(GetPosition(controlPointId) - GetPosition(1)).normalized;
-                }
-                else if (controlPointId==points.Count-1)
-                {
-                    tangent = (GetPosition(controlPointId) - GetPosition(controlPointId - 1)).normalized;
-                }
-                else
-                {
-                    tangent = ((GetPosition(controlPointId) - GetPosition(controlPointId - 1)).normalized - (GetPosition(controlPointId) - GetPosition(controlPointId + 1)).normalized).normalized;
-                }
-                //Debug.Log(tangent);
-
-                Vector3 startpointVertice;
-            
-                if (tangent.y == 1)
-                {
-                    startpointVertice = Vector3.right;
-                }
-                else if (tangent.y == -1)
-                {
-                    startpointVertice = Vector3.right;
-                }
-                else {
-                    //calculate vector perpendicular tangent
-                    var helpVector = Quaternion.Euler(0, -90, 0) * tangent;
-                    //cross returns vector perpendicular to two vectors
-                    startpointVertice = Vector3.Cross(tangent, helpVector).normalized;
-                }
-
-                startpointVertice *= radius/100;
-
-
-                var offsetCircle=Quaternion.AngleAxis(360f / corners, tangent);
-
-                for (int i = 0; i < corners; i++)
-                {
-                    offsetCircle = Quaternion.AngleAxis((360f / corners) * i, tangent);
-                    tempVertices[i + corners * controlPointId] = (offsetCircle * startpointVertice) + points[controlPointId].position;
-                    tempNormals[i + corners * controlPointId] = offsetCircle * startpointVertice;
-                }
-            }
-
-
-            mesh.vertices = tempVertices; 
-            mesh.normals = tempNormals;
-
-            var tempTriangles = new int[corners*6*(points.Count-1)];
-            for (int row = 0; row < points.Count-1; row++)
-            {
-                    for (int i = 0; i < corners; i++)
-                {
-                    int baseLine = row * corners * 6 + i * 6;
-                    tempTriangles[baseLine + 0] = i                             + corners * row;
-                    tempTriangles[baseLine + 1] = (i + 1) % corners             + corners * row;
-                    tempTriangles[baseLine + 2] = corners + i                   + corners * row;
-                    tempTriangles[baseLine + 3] = (i + 1) % corners             + corners * row;
-                    tempTriangles[baseLine + 4] = corners + (i + 1) % corners   + corners * row;
-                    tempTriangles[baseLine + 5] = corners + i                   + corners * row;
-                }
-            }
-
-            mesh.triangles=tempTriangles;
-            meshFilter.sharedMesh = mesh;
-        }
-        public void ShowWire(bool showWire)
-        {
-            if (startPointGO != null && endPointGO != null)
-            {
-                if (showWire)
-                {
-                    startPointGO.gameObject.GetComponent<MeshRenderer>().enabled = true;
-                    endPointGO.gameObject.GetComponent<MeshRenderer>().enabled = true;
-                    this.gameObject.GetComponent<MeshRenderer>().enabled = true;
-                }
-                else
-                {
-                    startPointGO.gameObject.GetComponent<MeshRenderer>().enabled = false;
-                    endPointGO.gameObject.GetComponent<MeshRenderer>().enabled = false;
-                    this.gameObject.GetComponent<MeshRenderer>().enabled = false;
-                }
-            }
-        }
-
+        /// <summary>
+        /// in case the active render pipeline differs from the default, URP materials are provided
+        /// </summary>
         private void UpdateMaterials()
         {
             Material blueURP = AssetDatabase.LoadAssetAtPath<Material>("Assets/WireGenerator/Materials/blueURP.mat");
             Material redURP = AssetDatabase.LoadAssetAtPath<Material>("Assets/WireGenerator/Materials/redURP.mat");
             Material blackURP = AssetDatabase.LoadAssetAtPath<Material>("Assets/WireGenerator/Materials/blackURP.mat");
-            AssetDatabase.LoadAssetAtPath<GameObject>("Assets/WireGenerator/Prefabs/StartPoint.prefab").GetComponent<MeshRenderer>().material = blueURP;
-            AssetDatabase.LoadAssetAtPath<GameObject>("Assets/WireGenerator/Prefabs/EndPoint.prefab").GetComponent<MeshRenderer>().material = redURP;
-            AssetDatabase.LoadAssetAtPath<GameObject>("Assets/WireGenerator/Prefabs/Wire.prefab").GetComponent<MeshRenderer>().sharedMaterials[0] = blackURP;
-            AssetDatabase.LoadAssetAtPath<GameObject>("Assets/WireGenerator/Prefabs/Wire.prefab").GetComponent<MeshRenderer>().sharedMaterials[1] = blackURP;
+            //AssetDatabase.LoadAssetAtPath<GameObject>("Assets/WireGenerator/Prefabs/StartPoint.prefab").GetComponent<MeshRenderer>().material = blueURP;
+            //AssetDatabase.LoadAssetAtPath<GameObject>("Assets/WireGenerator/Prefabs/EndPoint.prefab").GetComponent<MeshRenderer>().material = redURP;
+            //AssetDatabase.LoadAssetAtPath<GameObject>("Assets/WireGenerator/Prefabs/Wire.prefab").GetComponent<MeshRenderer>().sharedMaterials[0] = blackURP;
+            //AssetDatabase.LoadAssetAtPath<GameObject>("Assets/WireGenerator/Prefabs/Wire.prefab").GetComponent<MeshRenderer>().sharedMaterials[1] = blackURP;
             Material[] wireMaterials = this.GetComponent<MeshRenderer>().sharedMaterials;
-            if (wireMaterial == null)
-                wireMaterials[0] = blackURP;
-            else
-                wireMaterials[0] = wireMaterial;
-            if (cornerMaterial == null)
-                wireMaterials[1] = blackURP;
-            else
-                wireMaterials[1] = cornerMaterial;
+
+            wireMaterials[0] = blackURP;
+            wireMaterials[1] = blackURP;
+
             startPointGO.GetComponent<MeshRenderer>().sharedMaterial = blueURP;
             endPointGO.GetComponent<MeshRenderer>().sharedMaterial = redURP;
             this.GetComponent<MeshRenderer>().sharedMaterials = wireMaterials;

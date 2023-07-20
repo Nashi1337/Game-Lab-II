@@ -204,6 +204,7 @@ namespace WireGeneratorPathfinding
         }
     }
 
+    //adds a position handle to each control point
     [EditorTool("Wire Tool", typeof(WirePathfinding))]
     class WireTool: EditorTool, IDrawSelectedHandles
     {
