@@ -1,7 +1,3 @@
-`Please edit this README to fit your project and keep it up-to-date with your concept.`
-
-`All final deliverables (code, executable game, report, trailer and poster) have to be committed, tagged as final and pushed to your GitLab repository.`
-
 # GameLab Project Repository
 
 |  General Info  | |
@@ -12,21 +8,20 @@
 | Target Platform(s) | Windows |
 | Start Date | 3.11.2022 |
 | Study Program | Games Engineering B.Sc.|
-| Engine Version | Unity 2020.3.15f2 LTS |
+| Engine Version | Unity 2020.3.43f1 LTS |
 
 ### Abstract
 
-`Insert your project description here, and keep it up-to-date.`
-
-`--- 8< --- READ, THEN REPLACE WITH CUSTOM CONTENT BELOW HERE --- 8< ---`
+The Wire Generator Plugin for Unity, developed for Electrified by 4hats, lets the user create a wire from one point to another and customize it.
+It finds a path between two points and circumvents obstacles with colliders. Each control point of the wire is freely moveable.
 
 ## Repository Usage Guides
 
 ```
 RepositoryRoot/
-    ├── README.md           // This should reflect your project 
-    │                       //  accurately, so always merge infor- 
-    │                       //  mation from your concept paper 
+    ├── README.md           // This should reflect your project
+    │                       //  accurately, so always merge infor-
+    │                       //  mation from your concept paper
     │                       //  with the readme
     ├── builds/             // Archives (.zip) of built executables of your projects
     │                       //  including (non-standard) dependencies
@@ -42,45 +37,9 @@ RepositoryRoot/
     └── trailer/            // .mp4 (final trailer, no raw material)
 ```
 
-### Project and Source Control
-
-Read more about Git in the [Atlassian Git Tutorials](https://de.atlassian.com/git).
-
-#### Avoiding Clutter with .gitignore
-Gitignore files allow to exclude certain patterns from being versioned.
-This is necessary to avoid unnecessary (and possibly harmful) cluttering of your repository.
-Especially the automatically generated project and cache files of VisualStudio, Unity, or Unreal projects should be ignored.
-
-You can find [a selection of *.gitignore* files publicly available on GitHub](https://github.com/github/gitignore).
-
-##### Quick Check if .gitignore is working
-
-Your *.gitignore* is not correctly set up, if
-* your repository contains Folders such as `Library`, `DerivedDataCache` or `Saved`
-* `cache` files, `visual studio` project files etc. are `shown as modified` before commiting with your git client
-
-In this case, check your setup.
-Be aware that *.gitignore* is the actual, required filename!
-
-#### Versioning Binary Assets with Git LFS and .gitattributes
-Gitattribute files define file types to be handled through the Git Large File Storage (Git LFS) System.
-This system does not handle binary files, such as assets, images, meshes, etc. well.
-Even minimal changes add the whole file to the projects history.
-Git LFS identifies iterations of binary files using a hash in the repository, but stores the actual binary data transparently in a seperate data silo.
-
-To let Git LFS track a certain file (e.g. recursively all *.jpg*), execute this command:
-
-	> git lfs track *.jpg
-
-This command creates the following entry in the *.gitattributes* file:
-
-	*.jpg filter=lfs diff=lfs merge=lfs -text
-
-Git LFS is installed on all Workstations in E37 and the GameLabs.
-For your private computer, you can [download Git LFS here](https://git-lfs.github.com/).
-
-#### Further Reading: 
-* [Epic on Git for Unreal](https://wiki.unrealengine.com/Git_source_control_(Tutorial)#Workarounds_for_dealing_with_binary_files_on_your_Git_repository)
-* [GitLFS](https://www.git-lfs.com)
-* [Git](https://www.git-scm.com)
-
+"builds" contains the .unitypackage file that needs to be imported in a Unity project. It contains a demo scene that explains the plugin.
+"code" contains the whole code
+"documentation" contains a .txt file with a reference to said demo scene. And maybe the same tutorial as PDF if pushing after final works.
+"poster" obviously contains the final poster that was hopefully printed for us
+"report" contains the report we worked very hard and long on
+"trailer" contains a fun little trailer that shows off our cool plugin.
