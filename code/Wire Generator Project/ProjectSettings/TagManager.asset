@@ -4,9 +4,15 @@
 TagManager:
   serializedVersion: 2
   tags:
+  - wall
   - startPoint
   - endPoint
-  - wall
+  - wire
+  - wire1
+  - wire2
+  - wire3
+  - wire4
+  - wire5
   layers:
   - Default
   - TransparentFX
