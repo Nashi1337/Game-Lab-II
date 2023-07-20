@@ -1,0 +1,2 @@
+import the unitypackage file and open the DemoScene.
+It explains the plugin and let's you test some things and also some issues that could come up and how to fix them.
