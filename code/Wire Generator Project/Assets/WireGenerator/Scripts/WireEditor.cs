@@ -1,9 +1,6 @@
 using UnityEngine;
 using UnityEditor;
 using UnityEditor.EditorTools;
-using System.Linq;
-using System;
-using UnityEditor.SceneManagement;
 
 namespace WireGenerator
 {
@@ -140,6 +137,7 @@ namespace WireGenerator
             }
             Handles.EndGUI();
             EditorGUI.BeginChangeCheck();
+
             for (int i = 0; i < wire.points.Count;i++)
             {
                 wire.SetPosition(i,Handles.PositionHandle(wire.GetPosition(i), Quaternion.identity));
