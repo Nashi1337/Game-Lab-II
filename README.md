@@ -4,7 +4,7 @@
 | ---|---|
 | Working Title | Wire Generator Plugin |
 | Final Title | Wire Generator Plugin |
-| Student | Max Rogner, maximilian.rogner@stud-mail.uni-wuerzburg.de, s432750 <br> Trucy Petter, trucy.petter@stud-mail.uni-wuerzburg.de, s407385|
+| Student | Linda Rogner, linda.rogner@stud-mail.uni-wuerzburg.de, s432750 <br> Trucy Petter, trucy.petter@stud-mail.uni-wuerzburg.de, s407385|
 | Target Platform(s) | Windows |
 | Start Date | 3.11.2022 |
 | Study Program | Games Engineering B.Sc.|
